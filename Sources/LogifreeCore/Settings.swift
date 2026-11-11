@@ -150,6 +150,15 @@ public struct AgentStatus: Codable {
     }
 
     public static let changedNotification = "local.logifree.status"
+    /// Posted by the app to make the agent undo its changes and exit.
+    public static let quitNotification = "local.logifree.quit"
+
+    public static func postQuit() { notify_post(quitNotification) }
+
+    public static func observeQuit(_ handler: @escaping () -> Void) {
+        var token: Int32 = 0
+        notify_register_dispatch(quitNotification, &token, .main) { _ in handler() }
+    }
 
     /// Calls `handler` on main whenever the agent rewrites its status.
     public static func observeChanges(_ handler: @escaping () -> Void) {

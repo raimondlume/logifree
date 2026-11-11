@@ -9,6 +9,12 @@ struct LogifreeApp: App {
             ContentView()
         }
         .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(after: .appTermination) {
+                Button("Quit Logifree and Agent") { AppModel.quitCompletely() }
+                    .keyboardShortcut("q", modifiers: [.command, .option])
+            }
+        }
     }
 }
 

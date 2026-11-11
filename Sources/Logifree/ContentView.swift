@@ -31,6 +31,14 @@ struct ContentView: View {
                     .frame(width: 8, height: 8)
                 Text(agentHeadline)
                     .layoutPriority(1)
+                if model.agentRunning {
+                    Button("Quit") { AppModel.quitCompletely() }
+                        .controlSize(.small)
+                        .help("Stop Logifree, put your devices back to normal, and close this window. It starts again at login.")
+                } else if model.agentEnabled {
+                    Button("Start") { model.startAgent() }
+                        .controlSize(.small)
+                }
                 Spacer()
                 Text("Start at login")
                     .foregroundStyle(.secondary)
@@ -58,10 +66,7 @@ struct ContentView: View {
                 }
             }
         } footer: {
-            if model.agentEnabled, !model.agentRunning {
-                Text("Start at login is on, but Logifree isn't running. Turn the switch off and on again to restart it.")
-                    .foregroundStyle(.secondary)
-            } else if !model.agentRunning {
+            if !model.agentRunning {
                 Text("Your settings only take effect while Logifree runs in the background.")
                     .foregroundStyle(.secondary)
             }

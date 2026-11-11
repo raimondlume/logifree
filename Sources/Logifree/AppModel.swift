@@ -91,6 +91,22 @@ final class AppModel {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.refreshAgent() }
     }
 
+    /// Launch the agent now (it's stopped after a quit until the next login).
+    func startAgent() {
+        let launchctl = Process()
+        launchctl.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        launchctl.arguments = ["kickstart", "gui/\(getuid())/local.logifree.agent"]
+        do { try launchctl.run() } catch {
+            self.error = AppError(title: "Couldn't start Logifree", detail: error.localizedDescription)
+        }
+    }
+
+    /// Stop the agent (it restores your devices first) and close the app.
+    static func quitCompletely() {
+        AgentStatus.postQuit()
+        NSApp.terminate(nil)
+    }
+
     private func scheduleSave() {
         pendingSave?.cancel()
         let save = DispatchWorkItem { [weak self] in

@@ -34,6 +34,7 @@ final class Daemon {
         scrollTap.minimumLines = settings.minimumLinesPerClick
         applyKeyRemaps()
         Settings.observeReload { [unowned self] in reload() }
+        AgentStatus.observeQuit { [unowned self] in quit() }
         monitor.onAttach = { [unowned self] in attach($0) }
         monitor.onDetach = { [unowned self] transport in
             tracked.removeAll { $0.device.transport === transport }
@@ -53,6 +54,20 @@ final class Daemon {
         Log.info("settings reloaded")
         tracked.forEach { scheduleConfigure($0, after: 0) }
         writeStatus()
+    }
+
+    /// Puts devices back to how they'd be without Logifree, then exits cleanly so
+    /// launchd leaves it stopped until the next login (or the app starts it).
+    private func quit() {
+        Log.info("quitting: restoring devices")
+        settings.invertWheel = false
+        settings.invertThumbwheel = false
+        settings.gestures = [:]
+        settings.keyRemaps = []
+        scrollTap.minimumLines = 1
+        applyKeyRemaps()
+        tracked.forEach { _ = configure($0) }
+        exit(0)
     }
 
     private func writeStatus() {
