@@ -12,6 +12,8 @@ final class Daemon {
         var gestureDX = 0
         var gestureDY = 0
         var configureGeneration = 0
+        var configured = false
+        var problem: String?
         init(_ device: Device) { self.device = device }
     }
 
@@ -48,7 +50,8 @@ final class Daemon {
     }
 
     private func writeStatus() {
-        AgentStatus(accessibility: AXIsProcessTrusted(), devices: tracked.map { $0.device.name }).save()
+        let devices = tracked.filter(\.configured).map { AgentStatus.DeviceState(name: $0.device.name, problem: $0.problem) }
+        AgentStatus(accessibility: AXIsProcessTrusted(), devices: devices).save()
     }
 
     private func attach(_ transport: Transport) {
@@ -132,9 +135,10 @@ final class Daemon {
         _ = device.has(HIDPP.Feature.wirelessStatus) // cache its index to spot reconnects
 
         var applied: [String] = []
+        var problems: [String] = []
         func attempt(_ label: String, _ body: () throws -> Void) {
             do { try body(); applied.append(label) } catch HIDPPError.unsupported {
-            } catch { applied.append("\(label) failed: \(error)") }
+            } catch { problems.append("\(label) failed: \(error)") }
         }
 
         if device.has(HIDPP.Feature.hiresWheel) {
@@ -164,7 +168,10 @@ final class Daemon {
                 }
             }
         }
-        Log.info("\(device.name) (\(device.kindName), \(device.route)): \(applied.isEmpty ? "nothing to do" : applied.joined(separator: ", "))")
+        entry.configured = true
+        entry.problem = problems.isEmpty ? nil : problems.joined(separator: "; ")
+        let summary = (applied + problems).joined(separator: ", ")
+        Log.info("\(device.name) (\(device.kindName), \(device.route)): \(summary.isEmpty ? "nothing to do" : summary)")
         return true
     }
 }

@@ -101,11 +101,22 @@ public struct Settings: Codable, Equatable {
 /// What the agent reports about itself, for the app to show. Rewritten by the
 /// agent on start and on every reload.
 public struct AgentStatus: Codable {
+    /// A device the agent has configured, and what went wrong if anything did.
+    public struct DeviceState: Codable {
+        public var name: String
+        public var problem: String?
+
+        public init(name: String, problem: String?) {
+            self.name = name
+            self.problem = problem
+        }
+    }
+
     public var accessibility: Bool
-    public var devices: [String]
+    public var devices: [DeviceState]
     public var updated: Date
 
-    public init(accessibility: Bool, devices: [String], updated: Date = Date()) {
+    public init(accessibility: Bool, devices: [DeviceState], updated: Date = Date()) {
         self.accessibility = accessibility
         self.devices = devices
         self.updated = updated
@@ -125,5 +136,14 @@ public struct AgentStatus: Codable {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         try? encoder.encode(self).write(to: Self.url, options: .atomic)
+        notify_post(Self.changedNotification)
+    }
+
+    public static let changedNotification = "local.logifree.status"
+
+    /// Calls `handler` on main whenever the agent rewrites its status.
+    public static func observeChanges(_ handler: @escaping () -> Void) {
+        var token: Int32 = 0
+        notify_register_dispatch(changedNotification, &token, .main) { _ in handler() }
     }
 }

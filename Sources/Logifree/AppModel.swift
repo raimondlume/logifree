@@ -34,6 +34,10 @@ final class AppModel {
         HIDPP.softwareID = 0x0C // don't collide with the agent or the CLI
         browser = DeviceBrowser()
         inputMonitoringMissing = browser.openResult == kIOReturnNotPermitted
+        AgentStatus.observeChanges { [weak self] in
+            guard let self, agentRunning else { return }
+            agentStatus = AgentStatus.load()
+        }
         refreshAgent()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.refreshDevices() }
         NotificationCenter.default.addObserver(
@@ -48,8 +52,8 @@ final class AppModel {
     func refreshAgent() {
         agentService = service.status
         guard agentRunning else { return agentStatus = nil }
-        Settings.postReload() // the agent rewrites status.json
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.agentStatus = AgentStatus.load() }
+        agentStatus = AgentStatus.load()
+        Settings.postReload() // the agent re-applies, then rewrites status.json
     }
 
     func setAgentEnabled(_ enabled: Bool) {
@@ -69,6 +73,11 @@ final class AppModel {
         }
         pendingSave = save
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: save)
+    }
+
+    /// What the agent last reported for this device, matched by name.
+    func agentState(for device: Device) -> AgentStatus.DeviceState? {
+        agentStatus?.devices.first { $0.name == device.name }
     }
 
     // MARK: Easy-Switch
