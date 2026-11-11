@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>local.logifree</string>
+    <string>dev.raimond.logifree</string>
     <key>CFBundleName</key>
     <string>Logifree</string>
     <key>CFBundleDisplayName</key>

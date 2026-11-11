@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 APP="$HOME/Applications/Logifree.app"
 STAGE=.build/Logifree.app
-AGENT=local.logifree.agent
+AGENT=dev.raimond.logifree.agent
 
 swift build -c release
 

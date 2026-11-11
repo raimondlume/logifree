@@ -36,13 +36,26 @@ notification that tells the agent to reload.
 
 ## Install
 
+Builds from source; needs macOS 27 and Xcode 27 (or its command line tools).
+
 ```sh
+git clone https://github.com/raimondlume/logifree && cd logifree
 scripts/install.sh      # build, sign, install to ~/Applications, link the CLI
 ```
 
-Then in the app: turn on **Start at login**, and grant **Accessibility**
-to `logifree-agent` (gesture actions send keyboard shortcuts). Quit Logi
-Options+ and OpenLogi first: they change the same device settings.
+Then in the app:
+
+1. Turn on **Start at login**, and approve it in System Settings if asked.
+2. Grant **Input Monitoring** to Logifree when asked, so it can talk to your
+   devices.
+3. Grant **Accessibility** to `logifree-agent`, so gesture actions can send
+   keyboard shortcuts.
+
+Quit Logi Options+ and OpenLogi first: they change the same device settings.
+
+`install.sh` signs with your first Apple Development certificate if you have
+one (set `LOGIFREE_CERT` to pick another). Without one it signs ad hoc, which
+works, but macOS forgets the permissions above after every rebuild.
 
 ## CLI
 
@@ -58,7 +71,7 @@ logifree hosts forget mouse 3
 ```sh
 swift test
 LOGIFREE_DEBUG=1 .build/release/logifree-agent   # foreground agent, prints every HID++ report
-log stream --predicate 'subsystem == "local.logifree"'   # the installed agent's log
+log stream --predicate 'subsystem == "dev.raimond.logifree"'   # the installed agent's log
 ```
 
 `scripts/uninstall.sh` removes everything.

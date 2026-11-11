@@ -76,7 +76,7 @@ public struct Settings: Codable, Equatable {
     public static let directory = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/logifree")
     public static let url = directory.appendingPathComponent("settings.json")
-    public static let reloadNotification = "local.logifree.reload"
+    public static let reloadNotification = "dev.raimond.logifree.reload"
 
     public static func load() -> Settings {
         guard let data = try? Data(contentsOf: url) else { return Settings() }
@@ -149,9 +149,9 @@ public struct AgentStatus: Codable {
         notify_post(Self.changedNotification)
     }
 
-    public static let changedNotification = "local.logifree.status"
+    public static let changedNotification = "dev.raimond.logifree.status"
     /// Posted by the app to make the agent undo its changes and exit.
-    public static let quitNotification = "local.logifree.quit"
+    public static let quitNotification = "dev.raimond.logifree.quit"
 
     public static func postQuit() { notify_post(quitNotification) }
 

@@ -42,7 +42,7 @@ final class AppModel {
     var error: AppError?
 
     @ObservationIgnored let inputMonitoringMissing: Bool
-    @ObservationIgnored private let service = SMAppService.agent(plistName: "local.logifree.agent.plist")
+    @ObservationIgnored private let service = SMAppService.agent(plistName: "dev.raimond.logifree.agent.plist")
     @ObservationIgnored private let browser: DeviceBrowser
     @ObservationIgnored private let deviceQueue = DispatchQueue(label: "devices")
     @ObservationIgnored private var pendingSave: DispatchWorkItem?
@@ -95,7 +95,7 @@ final class AppModel {
     func startAgent() {
         let launchctl = Process()
         launchctl.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        launchctl.arguments = ["kickstart", "gui/\(getuid())/local.logifree.agent"]
+        launchctl.arguments = ["kickstart", "gui/\(getuid())/dev.raimond.logifree.agent"]
         do { try launchctl.run() } catch {
             self.error = AppError(title: "Couldn't start Logifree", detail: error.localizedDescription)
         }

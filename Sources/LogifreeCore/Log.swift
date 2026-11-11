@@ -1,10 +1,10 @@
 import Foundation
 import os
 
-/// Unified logging (`log stream --predicate 'subsystem == "local.logifree"'`),
+/// Unified logging (`log stream --predicate 'subsystem == "dev.raimond.logifree"'`),
 /// echoed to stdout when run from a terminal.
 public enum Log {
-    private static let logger = Logger(subsystem: "local.logifree", category: ProcessInfo.processInfo.processName)
+    private static let logger = Logger(subsystem: "dev.raimond.logifree", category: ProcessInfo.processInfo.processName)
     private static let echo = isatty(STDOUT_FILENO) != 0 || debugEnabled
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
