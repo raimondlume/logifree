@@ -110,7 +110,7 @@ private enum ActionChoice: CaseIterable, Hashable {
         case .none: "Nothing"
         case .missionControl: "Mission Control"
         case .appExpose: "App Exposé"
-        case .showDesktop: "Show Desktop"
+        case .showDesktop: "Show desktop"
         case .desktopLeft: "Previous desktop"
         case .desktopRight: "Next desktop"
         case .keystroke: "Keyboard shortcut"

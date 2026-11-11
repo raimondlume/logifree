@@ -112,11 +112,13 @@ public struct AgentStatus: Codable {
         }
     }
 
+    public var pid: Int32
     public var accessibility: Bool
     public var devices: [DeviceState]
     public var updated: Date
 
     public init(accessibility: Bool, devices: [DeviceState], updated: Date = Date()) {
+        pid = getpid()
         self.accessibility = accessibility
         self.devices = devices
         self.updated = updated

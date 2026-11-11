@@ -22,7 +22,12 @@ final class AppModel {
     private(set) var agentStatus: AgentStatus?
     private(set) var devices: [DeviceRow] = []
     private(set) var loadingDevices = false
-    var error: String?
+    var error: AppError?
+
+    struct AppError {
+        let title: String
+        let detail: String
+    }
 
     @ObservationIgnored let inputMonitoringMissing: Bool
     @ObservationIgnored private let service = SMAppService.agent(plistName: "local.logifree.agent.plist")
@@ -35,7 +40,7 @@ final class AppModel {
         browser = DeviceBrowser()
         inputMonitoringMissing = browser.openResult == kIOReturnNotPermitted
         AgentStatus.observeChanges { [weak self] in
-            guard let self, agentRunning else { return }
+            guard let self, agentEnabled else { return }
             agentStatus = AgentStatus.load()
         }
         refreshAgent()
@@ -47,11 +52,17 @@ final class AppModel {
 
     // MARK: Agent
 
-    var agentRunning: Bool { agentService == .enabled }
+    var agentEnabled: Bool { agentService == .enabled }
+
+    /// Enabled as a login item *and* its process is alive.
+    var agentRunning: Bool {
+        guard agentEnabled, let pid = agentStatus?.pid else { return false }
+        return kill(pid, 0) == 0
+    }
 
     func refreshAgent() {
         agentService = service.status
-        guard agentRunning else { return agentStatus = nil }
+        guard agentEnabled else { return agentStatus = nil }
         agentStatus = AgentStatus.load()
         Settings.postReload() // the agent re-applies, then rewrites status.json
     }
@@ -60,7 +71,7 @@ final class AppModel {
         do {
             if enabled { try service.register() } else { try service.unregister() }
         } catch {
-            self.error = "Couldn't \(enabled ? "start" : "stop") the agent: \(error.localizedDescription)"
+            self.error = AppError(title: "Couldn't turn \(enabled ? "on" : "off") Start at login", detail: error.localizedDescription)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.refreshAgent() }
     }
@@ -69,7 +80,9 @@ final class AppModel {
         pendingSave?.cancel()
         let save = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            do { try settings.save() } catch { self.error = "Couldn't save settings: \(error.localizedDescription)" }
+            do { try settings.save() } catch {
+                self.error = AppError(title: "Couldn't save your settings", detail: error.localizedDescription)
+            }
         }
         pendingSave = save
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: save)
@@ -99,24 +112,25 @@ final class AppModel {
     }
 
     func switchHost(_ row: DeviceRow, to slot: HostSlot) {
-        perform("switch \(row.device.name)") { try row.device.switchHost(to: slot.index) }
+        perform("Couldn't switch \(row.device.name) to channel \(slot.index + 1)") { try row.device.switchHost(to: slot.index) }
         refreshDevices(after: 2) // it drops off this Mac
     }
 
     func rename(_ row: DeviceRow, _ slot: HostSlot, to name: String) {
-        perform("rename the slot") { try row.device.renameHost(slot.index, to: name) }
+        perform("Couldn't rename channel \(slot.index + 1)") { try row.device.renameHost(slot.index, to: name) }
         refreshDevices()
     }
 
     func forget(_ row: DeviceRow, _ slot: HostSlot) {
-        perform("forget the slot") { try row.device.forgetHost(slot.index) }
+        perform("Couldn't forget channel \(slot.index + 1)") { try row.device.forgetHost(slot.index) }
         refreshDevices()
     }
 
-    private func perform(_ what: String, _ body: @escaping () throws -> Void) {
+    private func perform(_ failure: String, _ body: @escaping () throws -> Void) {
         deviceQueue.async {
             do { try body() } catch {
-                DispatchQueue.main.async { self.error = "Couldn't \(what): \(error)" }
+                let detail = "The device answered: \(error)."
+                DispatchQueue.main.async { self.error = AppError(title: failure, detail: detail) }
             }
         }
     }

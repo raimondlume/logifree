@@ -14,8 +14,8 @@ struct ContentView: View {
         }
         .formStyle(.grouped)
         .frame(width: 540, height: 760)
-        .alert("Something went wrong", isPresented: isPresent($model.error)) {} message: {
-            Text(model.error ?? "")
+        .alert(model.error?.title ?? "", isPresented: isPresent($model.error)) {} message: {
+            Text(model.error?.detail ?? "")
         }
     }
 
@@ -56,7 +56,10 @@ struct ContentView: View {
                 }
             }
         } footer: {
-            if !model.agentRunning {
+            if model.agentEnabled, !model.agentRunning {
+                Text("Start at login is on, but Logifree isn't running. Turn the switch off and on again to restart it.")
+                    .foregroundStyle(.secondary)
+            } else if !model.agentRunning {
                 Text("Your settings only take effect while Logifree runs in the background.")
                     .foregroundStyle(.secondary)
             }
@@ -64,11 +67,9 @@ struct ContentView: View {
     }
 
     private var agentHeadline: String {
-        switch model.agentService {
-        case .enabled: "Running in the background"
-        case .requiresApproval: "Waiting for approval"
-        default: "Not running"
-        }
+        if model.agentRunning { return "Running in the background" }
+        if model.agentService == .requiresApproval { return "Waiting for approval" }
+        return "Not running"
     }
 
     private func notice(_ text: String, button: String, action: @escaping () -> Void) -> some View {

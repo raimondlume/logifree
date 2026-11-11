@@ -9,11 +9,12 @@ struct ShortcutRecorder: View {
 
     var body: some View {
         Button(label) { monitor == nil ? start() : stop() }
+            .help(monitor == nil ? "Click, then press the keys" : "Press Esc to cancel")
             .onDisappear { stop() }
     }
 
     private var label: String {
-        if monitor != nil { return "Type shortcut…" }
+        if monitor != nil { return "Press a shortcut…" }
         return combo.key == nil ? "Record shortcut" : combo.display
     }
 

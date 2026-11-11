@@ -68,7 +68,7 @@ struct DeviceTile: View {
         ) { slot in
             Button("Forget", role: .destructive) { model.forget(row, slot) }
         } message: { slot in
-            Text("\(device.name) unpairs from \(slot.name.isEmpty ? "that computer" : slot.name). To use it there again, pair it from the device.")
+            Text("\(device.name) will unpair from \(slot.name.isEmpty ? "that computer" : slot.name). To use it there again, hold the device's channel \(slot.index + 1) button for 3 seconds, then pair it from that computer.")
         }
     }
 
@@ -84,7 +84,7 @@ struct DeviceTile: View {
                         .foregroundStyle(.green)
                 }
             } else {
-                Text("Waiting for Logifree").foregroundStyle(.tertiary)
+                Text("Applying settings…").foregroundStyle(.tertiary)
             }
         }
     }
@@ -160,6 +160,6 @@ private struct ChannelKey: View {
     private var caption: String {
         if slot.isCurrent { return "This Mac" }
         if !slot.paired { return "Empty" }
-        return slot.name.isEmpty ? "Unnamed" : slot.name
+        return slot.name.isEmpty ? "Unnamed computer" : slot.name
     }
 }
