@@ -18,6 +18,7 @@ final class Daemon {
     }
 
     private let monitor = HIDMonitor()
+    private let scrollTap = ScrollTap()
     private var tracked: [Tracked] = []
     private var settings = Settings.load()
 
@@ -29,6 +30,7 @@ final class Daemon {
         if !AXIsProcessTrustedWithOptions(options) {
             Log.info("no Accessibility permission yet: gesture actions can't send shortcuts until it's granted")
         }
+        scrollTap.minimumLines = settings.minimumLinesPerClick
         Settings.observeReload { [unowned self] in reload() }
         monitor.onAttach = { [unowned self] in attach($0) }
         monitor.onDetach = { [unowned self] transport in
@@ -44,6 +46,7 @@ final class Daemon {
 
     private func reload() {
         settings = Settings.load()
+        scrollTap.minimumLines = settings.minimumLinesPerClick // also retries the tap once Accessibility is granted
         Log.info("settings reloaded")
         tracked.forEach { scheduleConfigure($0, after: 0) }
         writeStatus()

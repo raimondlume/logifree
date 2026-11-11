@@ -52,6 +52,9 @@ public struct Settings: Codable, Equatable {
         .swipeRight: .desktopRight,
     ]
     public var swipeThreshold = 50
+    /// Slow wheel clicks scroll at least this many lines; 1 = macOS default.
+    /// Faster scrolling, which macOS already accelerates past this, is untouched.
+    public var minimumLinesPerClick = 3
 
     public init() {}
 
@@ -63,6 +66,8 @@ public struct Settings: Codable, Equatable {
         invertThumbwheel = try container.decodeIfPresent(Bool.self, forKey: .invertThumbwheel) ?? defaults.invertThumbwheel
         gestures = try container.decodeIfPresent([ThumbGesture: Action].self, forKey: .gestures) ?? defaults.gestures
         swipeThreshold = try container.decodeIfPresent(Int.self, forKey: .swipeThreshold) ?? defaults.swipeThreshold
+        minimumLinesPerClick = try container.decodeIfPresent(Int.self, forKey: .minimumLinesPerClick)
+            ?? defaults.minimumLinesPerClick
     }
 
     public static let directory = FileManager.default.homeDirectoryForCurrentUser
