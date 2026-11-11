@@ -1,45 +1,47 @@
 import Foundation
+import IOKit.hid
 
 /// Logitech HID++ framing. Long reports are 20 bytes:
 /// `[0x11, deviceIndex, featureIndex, function << 4 | softwareID, params × 16]`.
 /// Short (HID++ 1.0, receiver registers) are 7 bytes with report ID 0x10.
-enum HIDPP {
+public enum HIDPP {
     /// Tags our requests so replies to other software (or another logifree
     /// process) aren't mistaken for ours. Events from the device carry 0.
-    static var softwareID: UInt8 = 0x0A
+    /// Agent 0x0A, CLI 0x0B, app 0x0C.
+    public static var softwareID: UInt8 = 0x0A
 
-    enum Feature {
-        static let root: UInt16 = 0x0000
-        static let deviceName: UInt16 = 0x0005
-        static let changeHost: UInt16 = 0x1814
-        static let hostsInfo: UInt16 = 0x1815
-        static let reprogControls: UInt16 = 0x1B04
-        static let wirelessStatus: UInt16 = 0x1D4B
-        static let hiresWheel: UInt16 = 0x2121
-        static let thumbwheel: UInt16 = 0x2150
+    public enum Feature {
+        public static let root: UInt16 = 0x0000
+        public static let deviceName: UInt16 = 0x0005
+        public static let changeHost: UInt16 = 0x1814
+        public static let hostsInfo: UInt16 = 0x1815
+        public static let reprogControls: UInt16 = 0x1B04
+        public static let wirelessStatus: UInt16 = 0x1D4B
+        public static let hiresWheel: UInt16 = 0x2121
+        public static let thumbwheel: UInt16 = 0x2150
     }
 
-    static func isReply(_ reply: [UInt8], to request: [UInt8]) -> Bool {
-        guard reply[1] == request[1] else { return false }
+    public static func isReply(_ reply: [UInt8], to request: [UInt8]) -> Bool {
+        guard reply.count >= 5, request.count >= 4, reply[1] == request[1] else { return false }
         if reply[2] == request[2] && reply[3] == request[3] { return true }
         // Error replies (0x8F = HID++ 1.0, 0xFF = HID++ 2.0) echo the request's bytes 2–3.
         return (reply[2] == 0x8F || reply[2] == 0xFF) && reply[3] == request[2] && reply[4] == request[3]
     }
 
-    static func long(_ index: UInt8, _ featureIndex: UInt8, _ function: UInt8, _ params: [UInt8]) -> [UInt8] {
+    public static func long(_ index: UInt8, _ featureIndex: UInt8, _ function: UInt8, _ params: [UInt8]) -> [UInt8] {
         let report = [0x11, index, featureIndex, function << 4 | softwareID] + params.prefix(16)
         return report + [UInt8](repeating: 0, count: 20 - report.count)
     }
 }
 
-enum HIDPPError: Error, CustomStringConvertible {
+public enum HIDPPError: Error, CustomStringConvertible {
     case timeout
     case sendFailed(Int32)
     case hidpp10(UInt8)
     case hidpp20(UInt8)
     case unsupported(UInt16)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .timeout: "no reply"
         case .sendFailed(let code): String(format: "send failed (0x%08x)", code)
@@ -55,25 +57,21 @@ enum HIDPPError: Error, CustomStringConvertible {
 
 /// A mouse or keyboard reachable through a transport: a receiver slot (1–6) or,
 /// over Bluetooth, index 0xFF.
-final class Device {
-    let transport: Transport
-    let index: UInt8
-    private(set) var name = "Unknown device"
-    private(set) var kind: UInt8 = 0xFF // 0x0005 device type: 0 keyboard, 3 mouse, …
+public final class Device {
+    public let transport: Transport
+    public let index: UInt8
+    public private(set) var name = "Unknown device"
+    public private(set) var kind: UInt8 = 0xFF // 0x0005 device type: 0 keyboard, 3 mouse, …
     private var features: [UInt16: UInt8] = [:] // 0 = unsupported
 
-    // Gesture-button state, driven by the daemon.
-    var gestureHeld = false
-    var gestureDX = 0
-    var gestureDY = 0
-    var configureGeneration = 0
-
-    init(transport: Transport, index: UInt8) {
+    public init(transport: Transport, index: UInt8) {
         self.transport = transport
         self.index = index
     }
 
-    var kindName: String {
+    public var isMouse: Bool { kind == 3 }
+
+    public var kindName: String {
         switch kind {
         case 0: "keyboard"
         case 3: "mouse"
@@ -83,20 +81,21 @@ final class Device {
         }
     }
 
-    var route: String {
+    public var route: String {
         transport.kind == .bluetooth ? "Bluetooth" : "\(transport.productName) slot \(index)"
     }
 
-    /// Whether something answers at this index (devices asleep or absent don't).
-    func ping() -> Bool {
+    /// Whether something answers at this index. Absent slots error immediately;
+    /// a dozing device can take about a second to wake up and reply.
+    public func ping() -> Bool {
         let reply = try? transport.request(HIDPP.long(index, 0, 1, [0, 0, 0x5A]), timeout: 2)
         return reply?[6] == 0x5A
     }
 
-    func resetFeatures() { features = [:] }
+    public func resetFeatures() { features = [:] }
 
     /// The feature's index on this device, or nil when the device lacks it.
-    func featureIndex(_ feature: UInt16) throws -> UInt8? {
+    public func featureIndex(_ feature: UInt16) throws -> UInt8? {
         if feature == HIDPP.Feature.root { return 0 }
         if let cached = features[feature] { return cached == 0 ? nil : cached }
         let reply = try transport.request(HIDPP.long(index, 0, 0, [UInt8(feature >> 8), UInt8(feature & 0xFF)]))
@@ -105,26 +104,26 @@ final class Device {
     }
 
     /// The index if already looked up; used to classify incoming events cheaply.
-    func cachedIndex(_ feature: UInt16) -> UInt8? {
+    public func cachedIndex(_ feature: UInt16) -> UInt8? {
         features[feature].flatMap { $0 == 0 ? nil : $0 }
     }
 
-    func has(_ feature: UInt16) -> Bool { (try? featureIndex(feature)) != nil }
+    public func has(_ feature: UInt16) -> Bool { (try? featureIndex(feature)) != nil }
 
     /// Call a feature function; returns the 16 parameter bytes of the reply.
     @discardableResult
-    func call(_ feature: UInt16, _ function: UInt8, _ params: [UInt8] = []) throws -> [UInt8] {
+    public func call(_ feature: UInt16, _ function: UInt8, _ params: [UInt8] = []) throws -> [UInt8] {
         guard let featureIndex = try featureIndex(feature) else { throw HIDPPError.unsupported(feature) }
         return Array(try transport.request(HIDPP.long(index, featureIndex, function, params)).dropFirst(4))
     }
 
     /// Call a function the device acts on without replying (e.g. switching host).
-    func notify(_ feature: UInt16, _ function: UInt8, _ params: [UInt8] = []) throws {
+    public func notify(_ feature: UInt16, _ function: UInt8, _ params: [UInt8] = []) throws {
         guard let featureIndex = try featureIndex(feature) else { throw HIDPPError.unsupported(feature) }
         try transport.send(HIDPP.long(index, featureIndex, function, params))
     }
 
-    func loadIdentity() {
+    public func loadIdentity() {
         guard has(HIDPP.Feature.deviceName) else { return }
         if let length = try? call(HIDPP.Feature.deviceName, 0)[0] {
             var bytes: [UInt8] = []
@@ -139,7 +138,7 @@ final class Device {
 
 extension Transport {
     /// Find the devices behind this transport that are awake right now.
-    func discoverDevices() -> [Device] {
+    public func discoverDevices() -> [Device] {
         switch kind {
         case .bluetooth:
             return [Device(transport: self, index: 0xFF)]
@@ -148,5 +147,30 @@ extension Transport {
             _ = try? request([0x10, 0xFF, 0x80, 0x00, 0x00, 0x09, 0x00], timeout: 0.5)
             return (1...6).map { Device(transport: self, index: $0) }.filter { $0.ping() }
         }
+    }
+}
+
+/// One-shot device discovery for the CLI and the settings app.
+public final class DeviceBrowser {
+    private let monitor = HIDMonitor()
+    private var transports: [Transport] = []
+
+    public var openResult: IOReturn { monitor.openResult }
+
+    /// Call on main. Transports show up a moment later, as the main queue runs.
+    public init() {
+        monitor.onAttach = { [unowned self] in transports.append($0) }
+        monitor.onDetach = { [unowned self] transport in transports.removeAll { $0 === transport } }
+        monitor.start()
+    }
+
+    /// The transports currently attached. Read on main.
+    public var currentTransports: [Transport] { transports }
+
+    /// Blocking (pings each receiver slot); run off main in UI code.
+    public static func devices(on transports: [Transport]) -> [Device] {
+        let devices = transports.flatMap { $0.discoverDevices() }
+        devices.forEach { $0.loadIdentity() }
+        return devices
     }
 }

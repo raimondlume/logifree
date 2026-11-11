@@ -1,22 +1,8 @@
 import ApplicationServices
 import Foundation
+import LogifreeCore
 
-enum Gesture: Hashable {
-    case click, swipeUp, swipeDown, swipeLeft, swipeRight
-}
-
-enum Action {
-    case missionControl
-    case appExpose
-    case showDesktop
-    case desktopLeft
-    case desktopRight
-    /// A key press, e.g. `.keystroke(key: 0x31, flags: [.maskCommand])` for ⌘Space.
-    /// Key codes: the `kVK_*` constants in Carbon's Events.h.
-    case keystroke(key: CGKeyCode, flags: CGEventFlags)
-    /// Run a shell command, e.g. `.shell("open -a Notes")`.
-    case shell(String)
-
+extension Action {
     func perform() {
         switch self {
         case .missionControl: SymbolicHotKey.post(32)
@@ -24,8 +10,11 @@ enum Action {
         case .showDesktop: SymbolicHotKey.post(36)
         case .desktopLeft: SymbolicHotKey.post(79)
         case .desktopRight: SymbolicHotKey.post(81)
-        case .keystroke(let key, let flags): postKey(key, flags)
+        case .keystroke(let combo):
+            guard let key = combo.key else { return }
+            postKey(CGKeyCode(key), CGEventFlags(rawValue: combo.modifiers))
         case .shell(let command):
+            guard !command.isEmpty else { return }
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
             process.arguments = ["-c", command]

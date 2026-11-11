@@ -6,14 +6,14 @@ import IOKit.hid
 ///
 /// Input reports arrive on the HID thread. A reply to the in-flight request wakes
 /// the waiting caller; everything else is handed to `onNotification` on main.
-final class Transport {
-    enum Kind { case receiver, bluetooth }
+public final class Transport {
+    public enum Kind { case receiver, bluetooth }
 
-    let device: IOHIDDevice
-    let kind: Kind
-    let productName: String
+    public let device: IOHIDDevice
+    public let kind: Kind
+    public let productName: String
     /// Set on main; called on main with every report that isn't a reply.
-    var onNotification: (([UInt8]) -> Void)?
+    public var onNotification: (([UInt8]) -> Void)?
 
     private let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 64)
     private let lock = NSLock()
@@ -61,7 +61,7 @@ final class Transport {
     }
 
     /// Send a report without waiting for an answer. The first byte is the report ID.
-    func send(_ report: [UInt8]) throws {
+    public func send(_ report: [UInt8]) throws {
         Log.debug("-> \(Log.hex(report))")
         let result = report.withUnsafeBufferPointer {
             IOHIDDeviceSetReport(device, kIOHIDReportTypeOutput, CFIndex(report[0]), $0.baseAddress!, $0.count)
@@ -70,8 +70,8 @@ final class Transport {
     }
 
     /// Send a request and block until its reply (or an error reply) arrives.
-    /// Call from one thread at a time (main); never from the HID thread.
-    func request(_ report: [UInt8], timeout: TimeInterval = 2) throws -> [UInt8] {
+    /// Call from one thread at a time; never from the HID thread.
+    public func request(_ report: [UInt8], timeout: TimeInterval = 2) throws -> [UInt8] {
         let pending = Pending(report)
         lock.lock(); self.pending = pending; lock.unlock()
         defer { lock.lock(); self.pending = nil; lock.unlock() }
@@ -87,15 +87,19 @@ final class Transport {
 }
 
 /// Watches for Logitech HID++ endpoints on a dedicated thread, so replies keep
-/// flowing while main blocks on a request.
-final class HIDMonitor {
+/// flowing while the caller blocks on a request.
+public final class HIDMonitor {
     /// Called on main.
-    var onAttach: ((Transport) -> Void)?
-    var onDetach: ((Transport) -> Void)?
+    public var onAttach: ((Transport) -> Void)?
+    public var onDetach: ((Transport) -> Void)?
+    /// Result of opening the HID manager; `kIOReturnNotPermitted` means Input Monitoring is missing.
+    public private(set) var openResult: IOReturn = kIOReturnSuccess
 
     private var transports: [Transport] = [] // HID thread only
 
-    func start() {
+    public init() {}
+
+    public func start() {
         let ready = DispatchSemaphore(value: 0)
         let thread = Thread { [self] in
             let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
@@ -114,10 +118,10 @@ final class HIDMonitor {
             }, context)
 
             IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
-            let result = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
-            if result != kIOReturnSuccess {
-                Log.info("could not open HID devices (\(String(format: "0x%08x", result))); check Input Monitoring permission")
-                if result == kIOReturnNotPermitted { IOHIDRequestAccess(kIOHIDRequestTypeListenEvent) }
+            openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+            if openResult != kIOReturnSuccess {
+                Log.info("could not open HID devices (\(String(format: "0x%08x", openResult))); check Input Monitoring permission")
+                if openResult == kIOReturnNotPermitted { IOHIDRequestAccess(kIOHIDRequestTypeListenEvent) }
             }
             ready.signal()
             CFRunLoopRun()
@@ -143,27 +147,5 @@ final class HIDMonitor {
         guard let index = transports.firstIndex(where: { $0.device === device }) else { return }
         let transport = transports.remove(at: index)
         DispatchQueue.main.async { self.onDetach?(transport) }
-    }
-}
-
-enum Log {
-    private static let formatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
-
-    static func info(_ message: String) {
-        print("\(formatter.string(from: Date())) \(message)")
-    }
-
-    static let debugEnabled = ProcessInfo.processInfo.environment["LOGIFREE_DEBUG"] != nil
-
-    static func debug(_ message: @autoclosure () -> String) {
-        if debugEnabled { info(message()) }
-    }
-
-    static func hex(_ bytes: [UInt8]) -> String {
-        bytes.map { String(format: "%02x", $0) }.joined(separator: " ")
     }
 }
