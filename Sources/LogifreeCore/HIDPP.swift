@@ -150,17 +150,30 @@ extension Transport {
     }
 }
 
-/// One-shot device discovery for the CLI and the settings app.
+/// Device discovery for the CLI and the settings app.
 public final class DeviceBrowser {
     private let monitor = HIDMonitor()
     private var transports: [Transport] = []
 
     public var openResult: IOReturn { monitor.openResult }
 
+    /// Called on main when a receiver or Bluetooth device appears or goes away.
+    public var onChange: (() -> Void)?
+    /// Called on main with every unsolicited report (device events, receiver
+    /// connection notices), for callers that want to react live.
+    public var onReport: ((Transport, [UInt8]) -> Void)?
+
     /// Call on main. Transports show up a moment later, as the main queue runs.
     public init() {
-        monitor.onAttach = { [unowned self] in transports.append($0) }
-        monitor.onDetach = { [unowned self] transport in transports.removeAll { $0 === transport } }
+        monitor.onAttach = { [unowned self] transport in
+            transports.append(transport)
+            transport.onNotification = { [unowned self, unowned transport] in onReport?(transport, $0) }
+            onChange?()
+        }
+        monitor.onDetach = { [unowned self] transport in
+            transports.removeAll { $0 === transport }
+            onChange?()
+        }
         monitor.start()
     }
 

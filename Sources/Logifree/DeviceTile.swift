@@ -1,9 +1,8 @@
 import LogifreeCore
 import SwiftUI
 
-/// One connected device: what it is, how it's connected, whether the agent
-/// applied your settings, and its Easy-Switch channels drawn like the keys on
-/// the device itself.
+/// One device: what it is, how it's connected, whether the agent applied your
+/// settings, and its Easy-Switch channels drawn like the keys on the device.
 struct DeviceTile: View {
     let model: AppModel
     let row: AppModel.DeviceRow
@@ -13,49 +12,53 @@ struct DeviceTile: View {
     @State private var renameText = ""
     @State private var forgetting: HostSlot?
 
-    private var device: Device { row.device }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: device.isMouse ? "computermouse.fill" : "keyboard.fill")
+                Image(systemName: row.isMouse ? "computermouse.fill" : "keyboard.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(.secondary)
                     .frame(width: 40, height: 40)
                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(device.name).font(.headline)
+                    Text(row.name).font(.headline)
                     HStack(spacing: 10) {
-                        Text(device.transport.kind == .bluetooth ? "Bluetooth" : "Bolt receiver")
-                            .foregroundStyle(.secondary)
-                        status
+                        if let note = row.note {
+                            Text(note).foregroundStyle(.secondary)
+                        } else {
+                            Text(row.route).foregroundStyle(.secondary)
+                            status
+                        }
                     }
                     .font(.callout)
                 }
                 Spacer()
-                manageMenu
+                if row.connected { manageMenu }
             }
             if !row.slots.isEmpty {
-                HStack(spacing: 0) {
+                HStack(alignment: .top, spacing: 0) {
                     ForEach(row.slots, id: \.index) { slot in
-                        Button { if slot.paired, !slot.isCurrent { switching = slot } } label: {
-                            ChannelKey(slot: slot)
+                        let isCurrent = slot.index == row.currentChannel
+                        Button { if row.connected, slot.paired, !isCurrent { switching = slot } } label: {
+                            ChannelKey(slot: slot, isCurrent: isCurrent, isThisMac: isThisMac(slot, isCurrent: isCurrent))
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
-                        .help(help(for: slot))
+                        .help(help(for: slot, isCurrent: isCurrent))
                     }
                 }
             }
         }
         .padding(.vertical, 6)
+        .opacity(row.connected ? 1 : 0.55)
+        .animation(.easeOut(duration: 0.2), value: row.currentChannel)
         .confirmationDialog(
             "Switch to channel \((switching?.index ?? 0) + 1)?",
             isPresented: isPresent($switching), presenting: switching
         ) { slot in
             Button("Switch") { model.switchHost(row, to: slot) }
         } message: { slot in
-            Text("\(device.name) will connect to \(slot.name.isEmpty ? "that computer" : slot.name) and stop working on this Mac.")
+            Text("\(row.name) will connect to \(slot.name.isEmpty ? "that computer" : slot.name) and stop working on this Mac.")
         }
         .alert("Rename channel \((renaming?.index ?? 0) + 1)", isPresented: isPresent($renaming)) {
             TextField("Name", text: $renameText)
@@ -68,13 +71,13 @@ struct DeviceTile: View {
         ) { slot in
             Button("Forget", role: .destructive) { model.forget(row, slot) }
         } message: { slot in
-            Text("\(device.name) will unpair from \(slot.name.isEmpty ? "that computer" : slot.name). To use it there again, hold the device's channel \(slot.index + 1) button for 3 seconds, then pair it from that computer.")
+            Text("\(row.name) will unpair from \(slot.name.isEmpty ? "that computer" : slot.name). To use it there again, hold the device's channel \(slot.index + 1) button for 3 seconds, then pair it from that computer.")
         }
     }
 
     @ViewBuilder private var status: some View {
-        if model.agentRunning, device.isMouse {
-            if let state = model.agentState(for: device) {
+        if model.agentRunning, row.isMouse {
+            if let state = model.agentState(for: row) {
                 if let problem = state.problem {
                     Label("Some settings didn't apply", systemImage: "exclamationmark.triangle.fill")
                         .symbolRenderingMode(.multicolor)
@@ -101,7 +104,7 @@ struct DeviceTile: View {
             }
             if row.canForget {
                 Section("Forget") {
-                    ForEach(row.slots.filter { $0.paired && !$0.isCurrent }, id: \.index) { slot in
+                    ForEach(row.slots.filter { $0.paired && $0.index != row.currentChannel }, id: \.index) { slot in
                         Button("Channel \(slot.index + 1)…", role: .destructive) { forgetting = slot }
                     }
                 }
@@ -116,24 +119,36 @@ struct DeviceTile: View {
         .help("Rename or forget channels")
     }
 
-    private func help(for slot: HostSlot) -> String {
-        guard slot.paired else { return "Empty. Hold the device's channel \(slot.index + 1) button to pair a computer." }
-        let name = slot.name.isEmpty ? "Unnamed computer" : slot.name
+    /// The channel in use, or one paired to this Mac under its computer name
+    /// (e.g. the same Mac over Bluetooth on another channel).
+    private func isThisMac(_ slot: HostSlot, isCurrent: Bool) -> Bool {
+        (isCurrent && row.connected) || (slot.paired && slot.name == Self.computerName)
+    }
+
+    private static let computerName = Host.current().localizedName ?? ""
+
+    private func help(for slot: HostSlot, isCurrent: Bool) -> String {
+        guard slot.paired else { return "Empty. Hold the device's channel \(slot.index + 1) button for 3 seconds to pair a computer." }
+        let name = isThisMac(slot, isCurrent: isCurrent) ? "This Mac" : slot.name.isEmpty ? "Unnamed computer" : slot.name
         let via = slot.bus.isEmpty ? "" : " over \(slot.bus)"
-        return slot.isCurrent ? "\(name)\(via). This Mac." : "\(name)\(via). Click to switch."
+        if isCurrent && row.connected { return "\(name)\(via). In use." }
+        return row.connected ? "\(name)\(via). Click to switch." : "\(name)\(via)"
     }
 }
 
-/// An Easy-Switch key: LED on top, numbered keycap, the computer's name below.
+/// An Easy-Switch key: LED on top, numbered keycap, then the computer and how
+/// that channel connects.
 private struct ChannelKey: View {
     let slot: HostSlot
+    let isCurrent: Bool
+    let isThisMac: Bool
 
     var body: some View {
         VStack(spacing: 7) {
             Circle()
-                .fill(slot.isCurrent ? Color.accentColor : Color.primary.opacity(0.12))
+                .fill(isCurrent ? Color.accentColor : Color.primary.opacity(0.12))
                 .frame(width: 6, height: 6)
-                .shadow(color: slot.isCurrent ? Color.accentColor : .clear, radius: 4)
+                .shadow(color: isCurrent ? Color.accentColor : .clear, radius: 4)
             Text("\(slot.index + 1)")
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(slot.paired ? .primary : .tertiary)
@@ -145,20 +160,27 @@ private struct ChannelKey: View {
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(slot.isCurrent ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.1))
+                        .strokeBorder(isCurrent ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.1))
                 }
-            Text(caption)
-                .font(.caption)
-                .foregroundStyle(slot.isCurrent ? .primary : .secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: 140)
+            VStack(spacing: 1) {
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(isCurrent ? .primary : .secondary)
+                if slot.paired, !slot.bus.isEmpty {
+                    Text(slot.bus)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(maxWidth: 140)
         }
         .contentShape(Rectangle())
     }
 
     private var caption: String {
-        if slot.isCurrent { return "This Mac" }
+        if isThisMac { return "This Mac" }
         if !slot.paired { return "Empty" }
         return slot.name.isEmpty ? "Unnamed computer" : slot.name
     }
