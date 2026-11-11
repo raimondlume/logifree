@@ -24,7 +24,7 @@ macOS 27+.
 
 `Logifree.app` is two programs:
 
-- **`logifree-agent`**: headless, started by launchd at login (registered with
+- **`logifree-agent`** (`Logifree Agent.app`, inside the app): headless, started by launchd at login (registered with
   `SMAppService`). Applies settings, handles the gesture button, idles at ~3 MB
   with nothing polling.
 - **`Logifree`**: the SwiftUI settings window. Open it when you want to change
@@ -48,8 +48,9 @@ Then in the app:
 1. Turn on **Start at login**, and approve it in System Settings if asked.
 2. Grant **Input Monitoring** to Logifree when asked, so it can talk to your
    devices.
-3. Grant **Accessibility** to `logifree-agent`, so gesture actions can send
-   keyboard shortcuts.
+3. Grant **Accessibility** to **Logifree Agent**, so gesture actions can send
+   keyboard shortcuts and the scroll distance applies. **Grant Access…** in the
+   app opens the list and lets you drag the agent into it.
 
 Quit Logi Options+ and OpenLogi first: they change the same device settings.
 
