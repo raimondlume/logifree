@@ -3,10 +3,12 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>local.logifree</string>
-    <key>ProgramArguments</key>
+    <string>local.logifree.agent</string>
+    <key>BundleProgram</key>
+    <string>Contents/MacOS/logifree-agent</string>
+    <key>AssociatedBundleIdentifiers</key>
     <array>
-        <string>__BIN__</string>
+        <string>local.logifree</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -16,9 +18,5 @@
     <integer>5</integer>
     <key>ProcessType</key>
     <string>Interactive</string>
-    <key>StandardOutPath</key>
-    <string>__LOG__</string>
-    <key>StandardErrorPath</key>
-    <string>__LOG__</string>
 </dict>
 </plist>

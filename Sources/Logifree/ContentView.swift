@@ -16,7 +16,7 @@ struct ContentView: View {
             easySwitchSections
         }
         .formStyle(.grouped)
-        .frame(minWidth: 480, idealWidth: 520, minHeight: 480, idealHeight: 760)
+        .frame(width: 540, height: 720)
         .alert("Rename slot", isPresented: isPresent($renaming)) {
             TextField("Name", text: $renameText)
             Button("Rename") { if let (row, slot) = renaming { model.rename(row, slot, to: renameText) } }
@@ -102,7 +102,7 @@ struct ContentView: View {
                 .frame(width: 220)
             }
         } header: {
-            Text("ThumbGesture button")
+            Text("Gesture button")
         } footer: {
             Text("Click the thumb button, or hold it and move the mouse.").foregroundStyle(.secondary)
         }
