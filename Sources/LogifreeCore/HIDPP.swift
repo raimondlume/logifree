@@ -7,7 +7,7 @@ import IOKit.hid
 public enum HIDPP {
     /// Tags our requests so replies to other software (or another logifree
     /// process) aren't mistaken for ours. Events from the device carry 0.
-    /// Agent 0x0A, CLI 0x0B, app 0x0C.
+    /// Agent 0x0A, app 0x0C.
     public static var softwareID: UInt8 = 0x0A
 
     public enum Feature {
@@ -150,7 +150,7 @@ extension Transport {
     }
 }
 
-/// Device discovery for the CLI and the settings app.
+/// Device discovery for the settings app.
 public final class DeviceBrowser {
     private let monitor = HIDMonitor()
     private var transports: [Transport] = []

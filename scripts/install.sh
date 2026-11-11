@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build Logifree.app (settings window + embedded Logifree Agent.app), sign it, install it to
-# ~/Applications, link the CLI and restart the agent if it's enabled.
+# ~/Applications and restart the agent if it's enabled.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -38,8 +38,6 @@ mkdir -p "$HOME/Applications"
 rm -rf "$APP"
 ditto "$STAGE" "$APP"
 
-mkdir -p "$HOME/.local/bin"
-ln -sf "$APP/Contents/Library/LoginItems/Logifree Agent.app/Contents/MacOS/logifree-agent" "$HOME/.local/bin/logifree"
 
 # Pick up the new binary if the agent is already enabled (no-op otherwise).
 launchctl kickstart -k "gui/$(id -u)/$AGENT" 2>/dev/null || true

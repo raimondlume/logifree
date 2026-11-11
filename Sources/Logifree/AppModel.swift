@@ -49,7 +49,7 @@ final class AppModel {
     @ObservationIgnored private var pendingRefresh: DispatchWorkItem?
 
     init() {
-        HIDPP.softwareID = 0x0C // don't collide with the agent or the CLI
+        HIDPP.softwareID = 0x0C // don't collide with the agent
         browser = DeviceBrowser()
         inputMonitoringMissing = browser.openResult == kIOReturnNotPermitted
         browser.onChange = { [weak self] in self?.scheduleRefresh() }

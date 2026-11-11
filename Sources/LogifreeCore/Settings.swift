@@ -123,29 +123,23 @@ public struct AgentStatus: Codable {
     public var pid: Int32
     public var accessibility: Bool
     public var devices: [DeviceState]
-    public var updated: Date
 
-    public init(accessibility: Bool, devices: [DeviceState], updated: Date = Date()) {
+    public init(accessibility: Bool, devices: [DeviceState]) {
         pid = getpid()
         self.accessibility = accessibility
         self.devices = devices
-        self.updated = updated
     }
 
     public static let url = Settings.directory.appendingPathComponent("status.json")
 
     public static func load() -> AgentStatus? {
         guard let data = try? Data(contentsOf: url) else { return nil }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(AgentStatus.self, from: data)
+        return try? JSONDecoder().decode(AgentStatus.self, from: data)
     }
 
     public func save() {
         try? FileManager.default.createDirectory(at: Settings.directory, withIntermediateDirectories: true)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try? encoder.encode(self).write(to: Self.url, options: .atomic)
+        try? JSONEncoder().encode(self).write(to: Self.url, options: .atomic)
         notify_post(Self.changedNotification)
     }
 

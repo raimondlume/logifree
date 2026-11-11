@@ -7,7 +7,7 @@ let package = Package(
     targets: [
         // HID++ protocol, device access and the settings file, shared by both executables.
         .target(name: "LogifreeCore"),
-        // Headless background agent (launchd) + the `logifree hosts` CLI.
+        // Headless background agent, started by launchd as Logifree Agent.app.
         .executableTarget(name: "logifree-agent", dependencies: ["LogifreeCore"]),
         // Settings window. Opened on demand, quits when closed.
         .executableTarget(name: "Logifree", dependencies: ["LogifreeCore"]),

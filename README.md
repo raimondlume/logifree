@@ -30,7 +30,7 @@ git clone https://github.com/raimondlume/logifree && cd logifree
 scripts/install.sh
 ```
 
-The script builds and signs the app, installs it in `~/Applications`, and links the CLI. Then in the app:
+The script builds, signs and installs the app in `~/Applications`. Then in the app:
 
 1. Turn on **Start at login**, and approve it in System Settings if asked.
 2. Grant **Input Monitoring** to **Logifree** when asked, so it can find your devices.
@@ -39,15 +39,6 @@ The script builds and signs the app, installs it in `~/Applications`, and links 
 Quit Logi Options+ and OpenLogi first: they change the same device settings.
 
 The script signs with your first Apple Development certificate, if available. Set `LOGIFREE_CERT` to choose another. Without one, it signs ad hoc; macOS forgets the permissions after each rebuild.
-
-## CLI
-
-```sh
-logifree hosts                          # list Easy-Switch channels
-logifree hosts switch keyboard 2
-logifree hosts rename mouse 3 "Work laptop"
-logifree hosts forget mouse 3
-```
 
 ## How it's built
 
