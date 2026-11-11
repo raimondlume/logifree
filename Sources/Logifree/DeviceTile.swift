@@ -75,6 +75,7 @@ struct DeviceTile: View {
         }
     }
 
+    /// Silent when all is well; only in-progress and failures are news.
     @ViewBuilder private var status: some View {
         if model.agentRunning, row.isMouse {
             if let state = model.agentState(for: row) {
@@ -82,9 +83,6 @@ struct DeviceTile: View {
                     Label("Some settings didn't apply", systemImage: "exclamationmark.triangle.fill")
                         .symbolRenderingMode(.multicolor)
                         .help(problem)
-                } else {
-                    Label("Settings applied", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
                 }
             } else {
                 Text("Applying settings…").foregroundStyle(.tertiary)
