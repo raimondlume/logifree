@@ -6,7 +6,7 @@ Logifree is a tiny native macOS 27 replacement for Logi Options+, built for the 
 
 A background login item, Logifree Agent, idles at around 4 MB. The SwiftUI settings window only runs when you open it; closing the window quits it. For comparison, Logi Options+ and alternatives like OpenLogi idle at around 150–200 MB.
 
-![Devices and Easy-Switch channels](./docs/devices.png)
+<img src="https://github.com/user-attachments/assets/44cc101e-62df-4a77-9d0a-b4884829e535" width="540" alt="Logifree window: agent status and the Easy-Switch channels of a mouse and keyboard">
 
 ## What it does
 
@@ -19,7 +19,7 @@ A background login item, Logifree Agent, idles at around 4 MB. The SwiftUI setti
 
 The agent reapplies device settings when devices reconnect. Back and forward buttons and other native behavior are left alone.
 
-![Scrolling, gesture button and advanced settings](./docs/settings.png)
+<img src="https://github.com/user-attachments/assets/a937f6ba-076e-4812-a74c-c20942f1a1bd" width="540" alt="Logifree window: scrolling, gesture button and key remap settings">
 
 ## Install
 
