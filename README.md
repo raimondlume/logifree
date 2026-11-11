@@ -1,78 +1,64 @@
 <img src="assets/icon.png" width="64" height="64" alt="">
 
-# logifree
+# Logifree
 
-A tiny replacement for Logi Options+, for the handful of things I actually use.
+Logifree is a tiny native macOS 27 replacement for Logi Options+, built for the handful of things I actually use. It works with Logitech devices over a Bolt receiver or direct Bluetooth.
 
-- **Scroll direction:** reverses the main wheel and thumb wheel in the mouse
-  firmware (HID++ `0x2121` / `0x2150`), so the trackpad keeps macOS's natural
-  scrolling and everything else about scrolling stays native.
-- **Gesture button:** click or hold-and-swipe, mapped to Mission Control,
-  desktops, a keyboard shortcut or a shell command.
-- **Easy-Switch slots:** see, switch, rename and forget the host slots of the
-  mouse and keyboard.
-- **Key remaps** (advanced): key → key on every keyboard through macOS's own
-  `UserKeyMapping`, the same thing `hidutil` sets, re-applied at login. Handy
-  for turning § into F18 as a global shortcut.
-- Back/forward and everything else are left native.
+A background login item, Logifree Agent, idles at around 4 MB. The SwiftUI settings window only runs when you open it; closing the window quits it. For comparison, Logi Options+ and alternatives like OpenLogi idle at around 150–200 MB.
 
-Works over the Bolt receiver and direct Bluetooth. Devices forget these settings
-when they sleep or reconnect, so the agent re-applies them whenever one connects.
-macOS 27+.
+![Devices and Easy-Switch channels](./docs/devices.png)
 
-## How it's built
+## What it does
 
-`Logifree.app` is two programs:
+- Reverse the scroll wheel and thumb wheel in the mouse firmware, independently of the trackpad.
+- Set a minimum distance per scroll-wheel click: macOS default, 2 lines or 3 lines. Faster scrolling keeps macOS's acceleration.
+- Map a gesture button click or swipe to Mission Control, App Exposé, desktops, a keyboard shortcut or a shell command.
+- See the Easy-Switch channels on your mouse and keyboard, including their computer names and Bolt or Bluetooth connection. Switch, rename or forget channels where the device allows it. The view updates as devices change.
+- Remap keys on every keyboard using macOS's own `UserKeyMapping`. The collapsed Advanced section can, for example, turn § into F18 for a global shortcut.
+- Quit the agent and settings app together from the window, restoring connected devices.
 
-- **`logifree-agent`** (`Logifree Agent.app`, inside the app): headless, started by launchd at login (registered with
-  `SMAppService`). Applies settings, handles the gesture button, idles at ~3 MB
-  with nothing polling.
-- **`Logifree`**: the SwiftUI settings window. Open it when you want to change
-  something; closing it quits it.
+The agent reapplies device settings when devices reconnect. Back and forward buttons and other native behavior are left alone.
 
-They share `LogifreeCore` (HID++ and the settings model) and talk through
-`~/Library/Application Support/logifree/settings.json` plus a Darwin
-notification that tells the agent to reload.
+![Scrolling, gesture button and advanced settings](./docs/settings.png)
 
 ## Install
 
-Builds from source; needs macOS 27 and Xcode 27 (or its command line tools).
+There is no notarized release. The easiest way to install is to clone the repo and run the script, or ask your coding agent to do it. You need macOS 27 and Xcode 27 (or its command line tools).
 
 ```sh
 git clone https://github.com/raimondlume/logifree && cd logifree
-scripts/install.sh      # build, sign, install to ~/Applications, link the CLI
+scripts/install.sh
 ```
 
-Then in the app:
+The script builds and signs the app, installs it in `~/Applications`, and links the CLI. Then in the app:
 
 1. Turn on **Start at login**, and approve it in System Settings if asked.
-2. Grant **Input Monitoring** to Logifree when asked, so it can talk to your
-   devices.
-3. Grant **Accessibility** to **Logifree Agent**, so gesture actions can send
-   keyboard shortcuts and the scroll distance applies. **Grant Access…** in the
-   app opens the list and lets you drag the agent into it.
+2. Grant **Input Monitoring** to **Logifree** when asked, so it can find your devices.
+3. Grant **Accessibility** to **Logifree Agent**, so gesture actions can send shortcuts and the scroll distance applies. **Grant Access…** opens the list and lets you drag the agent into it.
 
 Quit Logi Options+ and OpenLogi first: they change the same device settings.
 
-`install.sh` signs with your first Apple Development certificate if you have
-one (set `LOGIFREE_CERT` to pick another). Without one it signs ad hoc, which
-works, but macOS forgets the permissions above after every rebuild.
+The script signs with your first Apple Development certificate, if available. Set `LOGIFREE_CERT` to choose another. Without one, it signs ad hoc; macOS forgets the permissions after each rebuild.
 
 ## CLI
 
 ```sh
-logifree hosts                          # list Easy-Switch slots
+logifree hosts                          # list Easy-Switch channels
 logifree hosts switch keyboard 2
 logifree hosts rename mouse 3 "Work laptop"
 logifree hosts forget mouse 3
 ```
 
+## How it's built
+
+`Logifree.app` contains a SwiftUI settings app and the headless `Logifree Agent.app` login item, registered with `SMAppService`. They share `LogifreeCore` for HID++ and the settings model. Settings live in `~/Library/Application Support/logifree/settings.json`; a Darwin notification tells the agent to reload them. The agent waits for events rather than polling.
+
 ## Development
 
 ```sh
 swift test
-LOGIFREE_DEBUG=1 .build/release/logifree-agent   # foreground agent, prints every HID++ report
-log stream --predicate 'subsystem == "dev.raimond.logifree"'   # the installed agent's log
+LOGIFREE_DEBUG=1 .build/release/logifree-agent   # foreground agent; prints HID++ reports
+log stream --predicate 'subsystem == "dev.raimond.logifree"'   # installed agent's log
 ```
 
 `scripts/uninstall.sh` removes everything.
