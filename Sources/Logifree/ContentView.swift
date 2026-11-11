@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var model = AppModel()
+    @State private var showAdvanced = false
 
     var body: some View {
         Form {
@@ -161,7 +162,7 @@ struct ContentView: View {
     // MARK: Advanced
 
     private var advancedSection: some View {
-        Section {
+        Section(isExpanded: $showAdvanced) {
             ForEach(model.settings.keyRemaps.indices, id: \.self) { i in
                 HStack {
                     keyPicker("From", $model.settings.keyRemaps[i].from)
@@ -175,14 +176,17 @@ struct ContentView: View {
                     .help("Remove this remap")
                 }
             }
-            Button("Add key remap") {
-                model.settings.keyRemaps.append(KeyRemap(from: 0x64, to: 0x6D)) // § → F18
+            HStack(alignment: .firstTextBaseline) {
+                Text("Remaps keys on every keyboard, including the built-in one. F13–F20 make good global shortcuts, since no key sends them.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Add key remap") {
+                    model.settings.keyRemaps.append(KeyRemap(from: 0x64, to: 0x6D)) // § → F18
+                }
             }
         } header: {
             Text("Advanced")
-        } footer: {
-            Text("Remaps keys on every keyboard, including the built-in one. F13–F20 make good global shortcuts, since no key sends them.")
-                .foregroundStyle(.secondary)
         }
     }
 
