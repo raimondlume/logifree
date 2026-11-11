@@ -54,7 +54,7 @@ public struct Settings: Codable, Equatable {
     public var swipeThreshold = 50
     /// Slow wheel clicks scroll at least this many lines; 1 = macOS default.
     /// Faster scrolling, which macOS already accelerates past this, is untouched.
-    public var minimumLinesPerClick = 3
+    public var minimumLinesPerClick = 2
 
     public init() {}
 

@@ -118,27 +118,12 @@ struct ContentView: View {
         Section {
             Toggle("Reverse scroll wheel", isOn: $model.settings.invertWheel)
             Toggle("Reverse thumb wheel", isOn: $model.settings.invertThumbwheel)
-            LabeledContent {
-                HStack(spacing: 12) {
-                    Slider(
-                        value: Binding(
-                            get: { Double(model.settings.minimumLinesPerClick) },
-                            set: { model.settings.minimumLinesPerClick = Int($0.rounded()) }
-                        ),
-                        in: 1...10,
-                        step: 1
-                    )
-                    .frame(width: 160)
-                    Text(model.settings.minimumLinesPerClick == 1
-                         ? "macOS default"
-                         : "\(model.settings.minimumLinesPerClick) lines")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .frame(width: 96, alignment: .leading)
-                }
-            } label: {
-                Text("Distance per click")
+            Picker("Distance per click", selection: $model.settings.minimumLinesPerClick) {
+                Text("macOS default").tag(1)
+                Text("2 lines").tag(2)
+                Text("3 lines").tag(3)
             }
+            .pickerStyle(.segmented)
         } header: {
             Text("Scrolling")
         } footer: {

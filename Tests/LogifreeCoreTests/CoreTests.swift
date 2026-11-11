@@ -66,5 +66,6 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(decoded.invertWheel)
         XCTAssertEqual(decoded.gestures, Settings().gestures)
         XCTAssertEqual(decoded.swipeThreshold, 50)
+        XCTAssertEqual(decoded.minimumLinesPerClick, 2)
     }
 }
