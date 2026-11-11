@@ -40,7 +40,7 @@ struct ContentView: View {
 
     private var agentSection: some View {
         Section {
-            Toggle("Run in the background", isOn: Binding(
+            Toggle("Start at login", isOn: Binding(
                 get: { model.agentService == .enabled || model.agentService == .requiresApproval },
                 set: { model.setAgentEnabled($0) }
             ))
@@ -66,7 +66,7 @@ struct ContentView: View {
         } header: {
             Text("Agent")
         } footer: {
-            Text("The agent applies these settings whenever a device connects. It needs Accessibility (granted to logifree-agent) for gesture actions, which send keyboard shortcuts.")
+            Text("Keeps a small background agent running, now and after every login. It applies these settings whenever a device connects, and needs Accessibility (granted to logifree-agent) for gesture actions, which send keyboard shortcuts.")
                 .foregroundStyle(.secondary)
         }
     }

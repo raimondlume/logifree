@@ -37,7 +37,7 @@ notification that tells the agent to reload.
 scripts/install.sh      # build, sign, install to ~/Applications, link the CLI
 ```
 
-Then in the app: turn on **Run in the background**, and grant **Accessibility**
+Then in the app: turn on **Start at login**, and grant **Accessibility**
 to `logifree-agent` (gesture actions send keyboard shortcuts). Quit Logi
 Options+ and OpenLogi first: they change the same device settings.
 
