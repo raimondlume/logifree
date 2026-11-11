@@ -56,8 +56,8 @@ struct ContentView: View {
                 }
             }
             if model.agentRunning, model.agentStatus?.accessibility == false {
-                notice("Gesture actions need Accessibility access for logifree-agent.", button: "Open Settings") {
-                    openPrivacyPane("Privacy_Accessibility")
+                notice("Gesture actions and scroll distance need Accessibility access for Logifree Agent.", button: "Grant Access…") {
+                    model.grantAccessibility()
                 }
             }
             if model.inputMonitoringMissing {

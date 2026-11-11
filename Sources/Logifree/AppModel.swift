@@ -98,7 +98,33 @@ final class AppModel {
         launchctl.arguments = ["kickstart", "gui/\(getuid())/dev.raimond.logifree.agent"]
         do { try launchctl.run() } catch {
             self.error = AppError(title: "Couldn't start Logifree", detail: error.localizedDescription)
+            return
         }
+        // If it isn't up shortly, launchd still has an older registration (e.g. the
+        // agent moved inside the app after an update) and kickstart just hangs:
+        // registering again makes launchd read the bundled plist.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [self] in
+            if launchctl.isRunning { launchctl.terminate() }
+            refreshAgent()
+            guard !agentRunning else { return }
+            try? service.unregister()
+            setAgentEnabled(true)
+        }
+    }
+
+    /// The agent's own little app inside ours; it's what needs Accessibility.
+    var agentAppURL: URL {
+        Bundle.main.bundleURL.appending(path: "Contents/Library/LoginItems/Logifree Agent.app")
+    }
+
+    /// Opens Accessibility settings with the agent ready to drag into the list.
+    /// The agent only notices a new grant when asked, so ask it every second.
+    func grantAccessibility() {
+        PermissionGuide.shared.show(
+            app: agentAppURL, pane: "Privacy_Accessibility",
+            isGranted: { [weak self] in self?.agentStatus?.accessibility == true },
+            tick: { Settings.postReload() }
+        )
     }
 
     /// Stop the agent (it restores your devices first) and close the app.

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The background agent, as its own app so it has a name and icon in
+         System Settings (Login Items, Accessibility). -->
+    <key>CFBundleIdentifier</key>
+    <string>dev.raimond.logifree.agent</string>
+    <key>CFBundleName</key>
+    <string>Logifree Agent</string>
+    <key>CFBundleDisplayName</key>
+    <string>Logifree Agent</string>
+    <key>CFBundleExecutable</key>
+    <string>logifree-agent</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>27.0</string>
+    <key>LSBackgroundOnly</key>
+    <true/>
+</dict>
+</plist>
