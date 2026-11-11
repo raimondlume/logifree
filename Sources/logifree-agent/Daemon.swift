@@ -47,13 +47,24 @@ final class Daemon {
         exit(0)
     }
 
+    /// The app also posts a reload whenever its window becomes active, so only
+    /// talk to devices when something they care about changed.
     private func reload() {
+        let old = settings
         settings = Settings.load()
         scrollTap.minimumLines = settings.minimumLinesPerClick // also retries the tap once Accessibility is granted
-        applyKeyRemaps()
-        Log.info("settings reloaded")
-        tracked.forEach { scheduleConfigure($0, after: 0) }
+        if settings.keyRemaps != old.keyRemaps { applyKeyRemaps() }
+        if settings.invertWheel != old.invertWheel || settings.invertThumbwheel != old.invertThumbwheel
+            || divertsGesture(settings) != divertsGesture(old) {
+            Log.info("settings changed: reconfiguring devices")
+            tracked.forEach { scheduleConfigure($0, after: 0) }
+        }
         writeStatus()
+    }
+
+    /// Whether any gesture does something, so the button needs diverting.
+    private func divertsGesture(_ settings: Settings) -> Bool {
+        settings.gestures.values.contains { $0 != .keystroke(.unset) && $0 != .shell("") }
     }
 
     /// Puts devices back to how they'd be without Logifree, then exits cleanly so
@@ -187,7 +198,7 @@ final class Daemon {
             }
         }
         if device.isMouse, device.has(HIDPP.Feature.reprogControls) {
-            let divert = settings.gestures.values.contains { $0 != .keystroke(.unset) && $0 != .shell("") }
+            let divert = divertsGesture(settings)
             attempt(divert ? "gesture button diverted" : "gesture button native") {
                 // setCidReporting flags: divert (bit 0, valid bit 1), raw XY (bit 4, valid
                 // bit 5) so swipes can be measured. Undiverting = valid bits, values 0.

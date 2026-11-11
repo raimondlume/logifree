@@ -1,10 +1,14 @@
 import CoreGraphics
+import Foundation
 import LogifreeCore
 
 /// Makes slow wheel clicks scroll at least `minimumLines`. It edits macOS's own
 /// wheel events in place: nothing is synthesized or animated, faster scrolling
 /// (already accelerated past the minimum) passes untouched, and so do trackpads
 /// and horizontal scrolling. With the minimum at 1 there's no tap at all.
+///
+/// The tap runs on its own thread: every scroll on the system waits for it, so
+/// it must never sit behind the agent's (blocking) device I/O on main.
 final class ScrollTap {
     private var tap: CFMachPort?
 
@@ -31,7 +35,14 @@ final class ScrollTap {
         ) else {
             return Log.info("couldn't watch the scroll wheel: Accessibility permission missing")
         }
-        CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, tap, 0), .commonModes)
+        let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
+        let thread = Thread {
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+            CFRunLoopRun()
+        }
+        thread.name = "scroll tap"
+        thread.qualityOfService = .userInteractive
+        thread.start()
         self.tap = tap
     }
 
