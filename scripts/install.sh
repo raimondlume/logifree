@@ -15,7 +15,12 @@ mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources" "$STAGE/Contents/Li
 cp .build/release/Logifree .build/release/logifree-agent "$STAGE/Contents/MacOS/"
 cp scripts/Info.plist "$STAGE/Contents/"
 cp scripts/$AGENT.plist "$STAGE/Contents/Library/LaunchAgents/"
-cp assets/AppIcon.icns "$STAGE/Contents/Resources/"
+# Compile the Icon Composer icon: Assets.car for macOS 27, AppIcon.icns as fallback.
+xcrun actool assets/AppIcon.icon --compile "$STAGE/Contents/Resources" \
+  --app-icon AppIcon --platform macosx --minimum-deployment-target 27.0 \
+  --output-partial-info-plist .build/AppIcon-partial.plist >/dev/null
+# actool exits 0 even when it compiles nothing.
+[ -f "$STAGE/Contents/Resources/Assets.car" ] || { echo "actool didn't compile assets/AppIcon.icon" >&2; exit 1; }
 
 # A stable signing identity keeps macOS permission grants across rebuilds.
 CERT="${LOGIFREE_CERT:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development[^"]*\)".*/\1/p' | head -1)}"
