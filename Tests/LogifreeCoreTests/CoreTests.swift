@@ -50,6 +50,23 @@ final class GestureTests: XCTestCase {
     }
 }
 
+final class KeyCatalogTests: XCTestCase {
+    func testNamesMatchHIDUsages() {
+        XCTAssertEqual(KeyCatalog.name(0x6D), "F18")
+        XCTAssertEqual(KeyCatalog.name(0x45), "F12")
+        XCTAssertEqual(KeyCatalog.name(0x68), "F13")
+        XCTAssertEqual(KeyCatalog.name(0x27), "0")
+        XCTAssertEqual(KeyCatalog.name(0x1E), "1")
+        XCTAssertEqual(KeyCatalog.name(0x1D), "Z")
+        XCTAssertEqual(KeyCatalog.name(0x99), "Key 0x99")
+    }
+
+    func testNoDuplicateKeys() {
+        let usages = KeyCatalog.groups.flatMap(\.keys).map(\.usage)
+        XCTAssertEqual(usages.count, Set(usages).count)
+    }
+}
+
 final class SettingsTests: XCTestCase {
     func testRoundTrip() throws {
         var settings = Settings()
@@ -57,6 +74,7 @@ final class SettingsTests: XCTestCase {
         settings.gestures[.click] = .keystroke(KeyCombo(key: 49, modifiers: 1 << 20, display: "⌘Space"))
         settings.gestures[.swipeUp] = .shell("open -a Notes")
         settings.gestures[.swipeDown] = nil
+        settings.keyRemaps = [KeyRemap(from: 0x64, to: 0x6D)]
         let decoded = try JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(settings))
         XCTAssertEqual(decoded, settings)
     }
@@ -67,5 +85,6 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(decoded.gestures, Settings().gestures)
         XCTAssertEqual(decoded.swipeThreshold, 50)
         XCTAssertEqual(decoded.minimumLinesPerClick, 2)
+        XCTAssertEqual(decoded.keyRemaps, [])
     }
 }

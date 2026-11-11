@@ -11,6 +11,7 @@ struct ContentView: View {
             devicesSection
             scrollingSection
             gestureSection
+            advancedSection
         }
         .formStyle(.grouped)
         .frame(width: 540, height: 760)
@@ -155,6 +156,46 @@ struct ContentView: View {
             Text("Click the thumb button, or hold it and move the mouse in a direction.")
                 .foregroundStyle(.secondary)
         }
+    }
+
+    // MARK: Advanced
+
+    private var advancedSection: some View {
+        Section {
+            ForEach(model.settings.keyRemaps.indices, id: \.self) { i in
+                HStack {
+                    keyPicker("From", $model.settings.keyRemaps[i].from)
+                    Image(systemName: "arrow.right").foregroundStyle(.secondary)
+                    keyPicker("To", $model.settings.keyRemaps[i].to)
+                    Spacer()
+                    Button { model.settings.keyRemaps.remove(at: i) } label: {
+                        Image(systemName: "minus.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Remove this remap")
+                }
+            }
+            Button("Add key remap") {
+                model.settings.keyRemaps.append(KeyRemap(from: 0x64, to: 0x6D)) // § → F18
+            }
+        } header: {
+            Text("Advanced")
+        } footer: {
+            Text("Remaps keys on every keyboard, including the built-in one. F13–F20 make good global shortcuts, since no key sends them.")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func keyPicker(_ label: String, _ usage: Binding<UInt16>) -> some View {
+        Picker(label, selection: usage) {
+            ForEach(KeyCatalog.groups, id: \.title) { group in
+                Section(group.title) {
+                    ForEach(group.keys, id: \.usage) { Text($0.name).tag($0.usage) }
+                }
+            }
+        }
+        .labelsHidden()
+        .fixedSize()
     }
 
     private func openPrivacyPane(_ anchor: String) {

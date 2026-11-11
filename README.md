@@ -11,6 +11,9 @@ A tiny replacement for Logi Options+, for the handful of things I actually use.
   desktops, a keyboard shortcut or a shell command.
 - **Easy-Switch slots:** see, switch, rename and forget the host slots of the
   mouse and keyboard.
+- **Key remaps** (advanced): key → key on every keyboard through macOS's own
+  `UserKeyMapping`, the same thing `hidutil` sets, re-applied at login. Handy
+  for turning § into F18 as a global shortcut.
 - Back/forward and everything else are left native.
 
 Works over the Bolt receiver and direct Bluetooth. Devices forget these settings

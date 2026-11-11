@@ -19,6 +19,7 @@ final class Daemon {
 
     private let monitor = HIDMonitor()
     private let scrollTap = ScrollTap()
+    private var remapsApplied = false
     private var tracked: [Tracked] = []
     private var settings = Settings.load()
 
@@ -31,6 +32,7 @@ final class Daemon {
             Log.info("no Accessibility permission yet: gesture actions can't send shortcuts until it's granted")
         }
         scrollTap.minimumLines = settings.minimumLinesPerClick
+        applyKeyRemaps()
         Settings.observeReload { [unowned self] in reload() }
         monitor.onAttach = { [unowned self] in attach($0) }
         monitor.onDetach = { [unowned self] transport in
@@ -47,6 +49,7 @@ final class Daemon {
     private func reload() {
         settings = Settings.load()
         scrollTap.minimumLines = settings.minimumLinesPerClick // also retries the tap once Accessibility is granted
+        applyKeyRemaps()
         Log.info("settings reloaded")
         tracked.forEach { scheduleConfigure($0, after: 0) }
         writeStatus()
@@ -57,8 +60,18 @@ final class Daemon {
         AgentStatus(accessibility: AXIsProcessTrusted(), devices: devices).save()
     }
 
+    /// Leaves the system's remaps alone unless we have some (or had, and need to clear them).
+    private func applyKeyRemaps() {
+        guard !settings.keyRemaps.isEmpty || remapsApplied else { return }
+        let ok = KeyRemap.apply(settings.keyRemaps)
+        remapsApplied = !settings.keyRemaps.isEmpty
+        let summary = settings.keyRemaps.map { "\(KeyCatalog.name($0.from)) → \(KeyCatalog.name($0.to))" }
+        Log.info(ok ? "key remaps: \(summary.isEmpty ? "cleared" : summary.joined(separator: ", "))" : "couldn't set key remaps")
+    }
+
     private func attach(_ transport: Transport) {
         Log.info("found \(transport.productName) (\(transport.kind))")
+        applyKeyRemaps() // a keyboard may have just (re)connected
         transport.onNotification = { [unowned self, unowned transport] in notification(transport, $0) }
         for device in transport.discoverDevices() {
             let entry = Tracked(device)

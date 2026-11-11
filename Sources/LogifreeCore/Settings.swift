@@ -55,6 +55,8 @@ public struct Settings: Codable, Equatable {
     /// Slow wheel clicks scroll at least this many lines; 1 = macOS default.
     /// Faster scrolling, which macOS already accelerates past this, is untouched.
     public var minimumLinesPerClick = 2
+    /// System-wide key → key remaps for every keyboard.
+    public var keyRemaps: [KeyRemap] = []
 
     public init() {}
 
@@ -68,6 +70,7 @@ public struct Settings: Codable, Equatable {
         swipeThreshold = try container.decodeIfPresent(Int.self, forKey: .swipeThreshold) ?? defaults.swipeThreshold
         minimumLinesPerClick = try container.decodeIfPresent(Int.self, forKey: .minimumLinesPerClick)
             ?? defaults.minimumLinesPerClick
+        keyRemaps = try container.decodeIfPresent([KeyRemap].self, forKey: .keyRemaps) ?? defaults.keyRemaps
     }
 
     public static let directory = FileManager.default.homeDirectoryForCurrentUser
