@@ -33,8 +33,7 @@ scripts/install.sh
 The script builds, signs and installs the app in `~/Applications`. Then in the app:
 
 1. Turn on **Start at login**, and approve it in System Settings if asked.
-2. Grant **Input Monitoring** to **Logifree** when asked, so it can find your devices.
-3. Grant **Accessibility** to **Logifree Agent**, so gesture actions can send shortcuts and the scroll distance applies. **Grant Access…** opens the list and lets you drag the agent into it.
+2. Grant **Accessibility** to **Logifree Agent**, so gesture actions can send shortcuts and the scroll distance applies. **Grant Access…** opens the list and lets you drag the agent into it. This also covers Input Monitoring, which macOS requires for Bluetooth devices.
 
 Quit Logi Options+ and OpenLogi first: they change the same device settings.
 
@@ -42,7 +41,7 @@ The script signs with your first Apple Development certificate, if available. Se
 
 ## How it's built
 
-`Logifree.app` contains a SwiftUI settings app and the headless `Logifree Agent.app` login item, registered with `SMAppService`. They share `LogifreeCore` for HID++ and the settings model. Settings live in `~/Library/Application Support/logifree/settings.json`; a Darwin notification tells the agent to reload them. The agent waits for events rather than polling.
+`Logifree.app` contains a SwiftUI settings app and the headless `Logifree Agent.app` login item, registered with `SMAppService`. They share `LogifreeCore` for HID++ and the settings model. Only the agent talks to devices: it reports them in `status.json`, and the window asks it to switch, rename or forget Easy-Switch channels. Settings live in `~/Library/Application Support/logifree/settings.json`; a Darwin notification tells the agent to reload them. The agent waits for events rather than polling.
 
 ## Development
 

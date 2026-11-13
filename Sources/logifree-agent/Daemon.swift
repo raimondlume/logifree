@@ -12,8 +12,12 @@ final class Daemon {
         var gestureDX = 0
         var gestureDY = 0
         var configureGeneration = 0
+        /// Configured and still on this Mac; only these are reported to the app.
         var configured = false
         var problem: String?
+        var slots: [HostSlot] = []
+        var canForget = false
+        var switchedTo: UInt8?
         init(_ device: Device) { self.device = device }
     }
 
@@ -22,6 +26,7 @@ final class Daemon {
     private var remapsApplied = false
     private var tracked: [Tracked] = []
     private var settings = Settings.load()
+    private var failure: AgentStatus.Failure?
 
     private static let gestureButton: [UInt8] = [0x00, 0xC3]
 
@@ -35,6 +40,7 @@ final class Daemon {
         applyKeyRemaps()
         Settings.observeReload { [unowned self] in reload() }
         AgentStatus.observeQuit { [unowned self] in quit() }
+        AgentCommand.observe { [unowned self] in if let command = AgentCommand.take() { perform(command) } }
         monitor.onAttach = { [unowned self] in attach($0) }
         monitor.onDetach = { [unowned self] transport in
             tracked.removeAll { $0.device.transport === transport }
@@ -82,8 +88,18 @@ final class Daemon {
     }
 
     private func writeStatus() {
-        let devices = tracked.filter(\.configured).map { AgentStatus.DeviceState(name: $0.device.name, problem: $0.problem) }
-        AgentStatus(accessibility: AXIsProcessTrusted(), devices: devices).save()
+        let devices = tracked.filter(\.configured).map { entry in
+            AgentStatus.DeviceState(
+                name: entry.device.name,
+                isMouse: entry.device.isMouse,
+                route: entry.device.transport.kind == .bluetooth ? "Bluetooth" : "Bolt receiver",
+                problem: entry.problem,
+                slots: entry.slots,
+                canForget: entry.canForget,
+                switchedTo: entry.switchedTo
+            )
+        }
+        AgentStatus(accessibility: AXIsProcessTrusted(), devices: devices, failure: failure).save()
     }
 
     /// Leaves the system's remaps alone unless we have some (or had, and need to clear them).
@@ -113,7 +129,13 @@ final class Daemon {
     private func notification(_ transport: Transport, _ report: [UInt8]) {
         // Receiver: a device (re)connected, e.g. woke from sleep.
         if report[0] == 0x10 && report[2] == 0x41 && transport.kind == .receiver {
-            guard report[4] & 0x40 == 0 else { return } // link lost
+            if report[4] & 0x40 != 0 { // link lost: asleep, or switched to another computer
+                if let entry = entry(transport, report[1]), entry.configured {
+                    entry.configured = false
+                    writeStatus()
+                }
+                return
+            }
             let entry = entry(transport, report[1]) ?? {
                 let entry = Tracked(Device(transport: transport, index: report[1]))
                 tracked.append(entry)
@@ -131,6 +153,10 @@ final class Daemon {
         if report[2] == entry.device.cachedIndex(HIDPP.Feature.wirelessStatus) {
             // Device reconnected and forgot our settings.
             scheduleConfigure(entry, after: 0.5)
+        } else if report[2] == entry.device.cachedIndex(HIDPP.Feature.changeHost), function == 0 {
+            // Easy-Switch button pressed: [from, to], sent just before it leaves.
+            entry.switchedTo = params[1]
+            writeStatus()
         } else if report[2] == entry.device.cachedIndex(HIDPP.Feature.reprogControls) {
             if function == 0 { divertedButtons(entry, params) }
             if function == 1, entry.gestureHeld {
@@ -210,10 +236,47 @@ final class Daemon {
                 }
             }
         }
+        loadSlots(entry)
+        entry.switchedTo = nil
         entry.configured = true
         entry.problem = problems.isEmpty ? nil : problems.joined(separator: "; ")
         let summary = (applied + problems).joined(separator: ", ")
         Log.info("\(device.name) (\(device.kindName), \(device.route)): \(summary.isEmpty ? "nothing to do" : summary)")
         return true
+    }
+
+    // MARK: Easy-Switch
+
+    private func loadSlots(_ entry: Tracked) {
+        let device = entry.device
+        entry.slots = device.hasEasySwitch ? (try? device.hostSlots()) ?? [] : []
+        entry.canForget = !entry.slots.isEmpty && device.canForgetHosts
+    }
+
+    /// Runs a change the app asked for, then reports the result.
+    private func perform(_ command: AgentCommand) {
+        guard let entry = tracked.first(where: { $0.configured && $0.device.name == command.device }) else {
+            failure = .init(command: command.id, message: "\(command.device) isn't connected.")
+            return writeStatus()
+        }
+        let device = entry.device
+        do {
+            switch command.action {
+            case .switchHost(let slot):
+                entry.switchedTo = slot
+                try device.switchHost(to: slot) // it leaves without replying
+            case .rename(let slot, let name):
+                try device.renameHost(slot, to: name)
+                loadSlots(entry)
+            case .forget(let slot):
+                try device.forgetHost(slot)
+                loadSlots(entry)
+            }
+            failure = nil
+        } catch {
+            entry.switchedTo = nil
+            failure = .init(command: command.id, message: "The device answered: \(error).")
+        }
+        writeStatus()
     }
 }

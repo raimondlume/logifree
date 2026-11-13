@@ -1,7 +1,7 @@
 import Foundation
 
 /// One Easy-Switch slot (0-based `index`; shown to people as index + 1).
-public struct HostSlot: Hashable {
+public struct HostSlot: Hashable, Codable {
     public let index: UInt8
     public let paired: Bool
     public let bus: String

@@ -106,28 +106,57 @@ public struct Settings: Codable, Equatable {
     }
 }
 
-/// What the agent reports about itself, for the app to show. Rewritten by the
-/// agent on start and on every reload.
+/// What the agent reports about itself and your devices, for the app to show.
+/// Rewritten by the agent whenever something changes. The agent is the only
+/// process that talks to devices, so the window needs no Input Monitoring.
 public struct AgentStatus: Codable {
-    /// A device the agent has configured, and what went wrong if anything did.
+    /// A connected device the agent has configured.
     public struct DeviceState: Codable {
         public var name: String
+        public var isMouse: Bool
+        /// "Bluetooth" or "Bolt receiver".
+        public var route: String
+        /// What went wrong applying settings, if anything did.
         public var problem: String?
+        /// Easy-Switch channels; empty without Easy-Switch.
+        public var slots: [HostSlot]
+        public var canForget: Bool
+        /// The channel it announced switching to; it's about to leave this Mac.
+        public var switchedTo: UInt8?
 
-        public init(name: String, problem: String?) {
+        public init(name: String, isMouse: Bool, route: String, problem: String?,
+                    slots: [HostSlot], canForget: Bool, switchedTo: UInt8?) {
             self.name = name
+            self.isMouse = isMouse
+            self.route = route
             self.problem = problem
+            self.slots = slots
+            self.canForget = canForget
+            self.switchedTo = switchedTo
+        }
+    }
+
+    /// An `AgentCommand` the agent couldn't carry out.
+    public struct Failure: Codable {
+        public var command: UUID
+        public var message: String
+
+        public init(command: UUID, message: String) {
+            self.command = command
+            self.message = message
         }
     }
 
     public var pid: Int32
     public var accessibility: Bool
     public var devices: [DeviceState]
+    public var failure: Failure?
 
-    public init(accessibility: Bool, devices: [DeviceState]) {
+    public init(accessibility: Bool, devices: [DeviceState], failure: Failure?) {
         pid = getpid()
         self.accessibility = accessibility
         self.devices = devices
+        self.failure = failure
     }
 
     public static let url = Settings.directory.appendingPathComponent("status.json")
@@ -158,5 +187,47 @@ public struct AgentStatus: Codable {
     public static func observeChanges(_ handler: @escaping () -> Void) {
         var token: Int32 = 0
         notify_register_dispatch(changedNotification, &token, .main) { _ in handler() }
+    }
+}
+
+/// An Easy-Switch change the app asks the agent to make on a device.
+public struct AgentCommand: Codable {
+    public enum Action: Codable {
+        case switchHost(UInt8)
+        case rename(UInt8, String)
+        case forget(UInt8)
+    }
+
+    public var id = UUID()
+    /// `AgentStatus.DeviceState.name`.
+    public var device: String
+    public var action: Action
+
+    public init(device: String, action: Action) {
+        self.device = device
+        self.action = action
+    }
+
+    public static let url = Settings.directory.appendingPathComponent("command.json")
+    public static let notification = "dev.raimond.logifree.command"
+
+    /// Write, then tell the agent. Failures come back in `AgentStatus.failure`.
+    public func send() throws {
+        try FileManager.default.createDirectory(at: Settings.directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(self).write(to: Self.url, options: .atomic)
+        notify_post(Self.notification)
+    }
+
+    /// The pending command, removed so it runs once.
+    public static func take() -> AgentCommand? {
+        defer { try? FileManager.default.removeItem(at: url) }
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(AgentCommand.self, from: data)
+    }
+
+    /// Calls `handler` on main whenever the app sends a command.
+    public static func observe(_ handler: @escaping () -> Void) {
+        var token: Int32 = 0
+        notify_register_dispatch(notification, &token, .main) { _ in handler() }
     }
 }

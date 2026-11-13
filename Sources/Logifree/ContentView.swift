@@ -60,11 +60,6 @@ struct ContentView: View {
                     model.grantAccessibility()
                 }
             }
-            if model.inputMonitoringMissing {
-                notice("Logifree needs Input Monitoring access to find your devices.", button: "Open Settings") {
-                    openPrivacyPane("Privacy_ListenEvent")
-                }
-            }
         } footer: {
             if !model.agentRunning {
                 Text("Your settings only take effect while Logifree runs in the background.")
@@ -93,29 +88,16 @@ struct ContentView: View {
     private var devicesSection: some View {
         Section {
             if model.devices.isEmpty {
-                HStack {
-                    Text(model.loadingDevices
-                         ? "Looking for devices…"
-                         : "No devices found. Move your mouse or press a key to wake them.")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if model.loadingDevices { ProgressView().controlSize(.small) }
-                }
+                Text(model.agentRunning
+                     ? "No devices found. Move your mouse or press a key to wake them."
+                     : "Your devices show up here while Logifree runs in the background.")
+                    .foregroundStyle(.secondary)
             }
             ForEach(model.devices) { row in
                 DeviceTile(model: model, row: row)
             }
         } header: {
-            HStack {
-                Text("Devices")
-                Spacer()
-                Button { model.refreshDevices() } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.borderless)
-                .disabled(model.loadingDevices)
-                .help("Look for devices again")
-            }
+            Text("Devices")
         }
     }
 
@@ -205,10 +187,6 @@ struct ContentView: View {
         }
         .labelsHidden()
         .fixedSize()
-    }
-
-    private func openPrivacyPane(_ anchor: String) {
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)")!)
     }
 }
 

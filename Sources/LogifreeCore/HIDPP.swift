@@ -5,9 +5,8 @@ import IOKit.hid
 /// `[0x11, deviceIndex, featureIndex, function << 4 | softwareID, params × 16]`.
 /// Short (HID++ 1.0, receiver registers) are 7 bytes with report ID 0x10.
 public enum HIDPP {
-    /// Tags our requests so replies to other software (or another logifree
-    /// process) aren't mistaken for ours. Events from the device carry 0.
-    /// Agent 0x0A, app 0x0C.
+    /// Tags our requests so replies to other software aren't mistaken for ours.
+    /// Events from the device carry 0.
     public static var softwareID: UInt8 = 0x0A
 
     public enum Feature {
@@ -147,43 +146,5 @@ extension Transport {
             _ = try? request([0x10, 0xFF, 0x80, 0x00, 0x00, 0x09, 0x00], timeout: 0.5)
             return (1...6).map { Device(transport: self, index: $0) }.filter { $0.ping() }
         }
-    }
-}
-
-/// Device discovery for the settings app.
-public final class DeviceBrowser {
-    private let monitor = HIDMonitor()
-    private var transports: [Transport] = []
-
-    public var openResult: IOReturn { monitor.openResult }
-
-    /// Called on main when a receiver or Bluetooth device appears or goes away.
-    public var onChange: (() -> Void)?
-    /// Called on main with every unsolicited report (device events, receiver
-    /// connection notices), for callers that want to react live.
-    public var onReport: ((Transport, [UInt8]) -> Void)?
-
-    /// Call on main. Transports show up a moment later, as the main queue runs.
-    public init() {
-        monitor.onAttach = { [unowned self] transport in
-            transports.append(transport)
-            transport.onNotification = { [unowned self, unowned transport] in onReport?(transport, $0) }
-            onChange?()
-        }
-        monitor.onDetach = { [unowned self] transport in
-            transports.removeAll { $0 === transport }
-            onChange?()
-        }
-        monitor.start()
-    }
-
-    /// The transports currently attached. Read on main.
-    public var currentTransports: [Transport] { transports }
-
-    /// Blocking (pings each receiver slot); run off main in UI code.
-    public static func devices(on transports: [Transport]) -> [Device] {
-        let devices = transports.flatMap { $0.discoverDevices() }
-        devices.forEach { $0.loadIdentity() }
-        return devices
     }
 }

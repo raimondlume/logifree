@@ -92,9 +92,6 @@ public final class HIDMonitor {
     /// Called on main.
     public var onAttach: ((Transport) -> Void)?
     public var onDetach: ((Transport) -> Void)?
-    /// Result of opening the HID manager; `kIOReturnNotPermitted` means Input Monitoring is missing.
-    public private(set) var openResult: IOReturn = kIOReturnSuccess
-
     private var transports: [Transport] = [] // HID thread only
 
     public init() {}
@@ -118,7 +115,7 @@ public final class HIDMonitor {
             }, context)
 
             IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
-            openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+            let openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
             if openResult != kIOReturnSuccess {
                 Log.info("could not open HID devices (\(String(format: "0x%08x", openResult))); check Input Monitoring permission")
                 if openResult == kIOReturnNotPermitted { IOHIDRequestAccess(kIOHIDRequestTypeListenEvent) }
