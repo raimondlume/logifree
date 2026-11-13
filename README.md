@@ -12,7 +12,7 @@ A background login item, Logifree Agent, idles at around 4 MB. The SwiftUI setti
 
 - Reverse the scroll wheel and thumb wheel in the mouse firmware, independently of the trackpad.
 - Set a minimum distance per scroll-wheel click: macOS default, 2 lines or 3 lines. Faster scrolling keeps macOS's acceleration.
-- Map a gesture button click or swipe to Mission Control, App Exposé, desktops, a keyboard shortcut or a shell command.
+- Map a gesture button click or swipe (the middle button on mice without one, like the MX Anywhere) to Mission Control, App Exposé, desktops, a keyboard shortcut or a shell command.
 - See the Easy-Switch channels on your mouse and keyboard, including their computer names and Bolt or Bluetooth connection. Switch, rename or forget channels where the device allows it. The view updates as devices change.
 - Remap keys on every keyboard using macOS's own `UserKeyMapping`. The collapsed Advanced section can, for example, turn § into F18 for a global shortcut.
 - Quit the agent and settings app together from the window, restoring connected devices.

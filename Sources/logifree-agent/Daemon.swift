@@ -8,6 +8,9 @@ final class Daemon {
     /// A connected device plus the agent's bookkeeping for it.
     private final class Tracked {
         let device: Device
+        /// The control acting as gesture button: thumb button, or middle button on
+        /// mice without one (e.g. MX Anywhere). Nil without either.
+        var gestureButton: [UInt8]?
         var gestureHeld = false
         var gestureDX = 0
         var gestureDY = 0
@@ -28,7 +31,8 @@ final class Daemon {
     private var settings = Settings.load()
     private var failure: AgentStatus.Failure?
 
-    private static let gestureButton: [UInt8] = [0x00, 0xC3]
+    private static let thumbButton: [UInt8] = [0x00, 0xC3]
+    private static let middleButton: [UInt8] = [0x00, 0x52]
 
     func run() -> Never {
         Log.info("logifree agent started")
@@ -167,7 +171,7 @@ final class Daemon {
     }
 
     private func divertedButtons(_ entry: Tracked, _ params: [UInt8]) {
-        let pressed = stride(from: 0, to: 8, by: 2).contains { Array(params[$0...$0 + 1]) == Self.gestureButton }
+        let pressed = stride(from: 0, to: 8, by: 2).contains { Array(params[$0...$0 + 1]) == entry.gestureButton }
         if pressed && !entry.gestureHeld {
             entry.gestureHeld = true
             entry.gestureDX = 0
@@ -223,17 +227,21 @@ final class Daemon {
                 try device.call(HIDPP.Feature.thumbwheel, 2, [0, settings.invertThumbwheel ? 1 : 0])
             }
         }
-        // getCidReporting fails on mice without a gesture button (e.g. MX Anywhere).
-        if device.isMouse, (try? device.call(HIDPP.Feature.reprogControls, 2, Self.gestureButton)) != nil {
+        // getCidReporting fails for a control the mouse doesn't have.
+        entry.gestureButton = !device.isMouse ? nil : [Self.thumbButton, Self.middleButton].first { button in
+            (try? device.call(HIDPP.Feature.reprogControls, 2, button)) != nil
+        }
+        if let button = entry.gestureButton {
             let divert = divertsGesture(settings)
-            attempt(divert ? "gesture button diverted" : "gesture button native") {
+            let name = button == Self.thumbButton ? "gesture button" : "middle button"
+            attempt(divert ? "\(name) diverted" : "\(name) native") {
                 // setCidReporting flags: divert (bit 0, valid bit 1), raw XY (bit 4, valid
                 // bit 5) so swipes can be measured. Undiverting = valid bits, values 0.
                 do {
-                    try device.call(HIDPP.Feature.reprogControls, 3, Self.gestureButton + [divert ? 0x33 : 0x22])
+                    try device.call(HIDPP.Feature.reprogControls, 3, button + [divert ? 0x33 : 0x22])
                 } catch HIDPPError.hidpp20 where divert {
-                    try device.call(HIDPP.Feature.reprogControls, 3, Self.gestureButton + [0x03])
-                    Log.info("\(device.name): no raw XY on the gesture button, only clicks will work")
+                    try device.call(HIDPP.Feature.reprogControls, 3, button + [0x03])
+                    Log.info("\(device.name): no raw XY on the \(name), only clicks will work")
                 }
             }
         }

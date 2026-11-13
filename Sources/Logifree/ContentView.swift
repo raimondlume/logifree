@@ -141,7 +141,7 @@ struct ContentView: View {
         } header: {
             Text("Gesture button")
         } footer: {
-            Text("Click the thumb button, or hold it and move the mouse in a direction.")
+            Text("Click the thumb button, or hold it and move the mouse in a direction. On mice without one, such as the MX Anywhere, the middle button takes its place.")
                 .foregroundStyle(.secondary)
         }
     }
