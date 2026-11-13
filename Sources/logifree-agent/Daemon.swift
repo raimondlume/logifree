@@ -223,7 +223,8 @@ final class Daemon {
                 try device.call(HIDPP.Feature.thumbwheel, 2, [0, settings.invertThumbwheel ? 1 : 0])
             }
         }
-        if device.isMouse, device.has(HIDPP.Feature.reprogControls) {
+        // getCidReporting fails on mice without a gesture button (e.g. MX Anywhere).
+        if device.isMouse, (try? device.call(HIDPP.Feature.reprogControls, 2, Self.gestureButton)) != nil {
             let divert = divertsGesture(settings)
             attempt(divert ? "gesture button diverted" : "gesture button native") {
                 // setCidReporting flags: divert (bit 0, valid bit 1), raw XY (bit 4, valid
