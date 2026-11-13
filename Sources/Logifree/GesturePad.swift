@@ -90,7 +90,7 @@ private struct GestureCell: View {
 }
 
 private enum ActionChoice: CaseIterable, Hashable {
-    case none, missionControl, appExpose, showDesktop, desktopLeft, desktopRight, keystroke, shell
+    case none, missionControl, appExpose, showDesktop, desktopLeft, desktopRight, middleClick, keystroke, shell
 
     init(_ action: Action?) {
         switch action {
@@ -100,6 +100,7 @@ private enum ActionChoice: CaseIterable, Hashable {
         case .showDesktop: self = .showDesktop
         case .desktopLeft: self = .desktopLeft
         case .desktopRight: self = .desktopRight
+        case .middleClick: self = .middleClick
         case .keystroke: self = .keystroke
         case .shell: self = .shell
         }
@@ -113,6 +114,7 @@ private enum ActionChoice: CaseIterable, Hashable {
         case .showDesktop: "Show desktop"
         case .desktopLeft: "Previous desktop"
         case .desktopRight: "Next desktop"
+        case .middleClick: "Middle click"
         case .keystroke: "Keyboard shortcut"
         case .shell: "Shell command"
         }
@@ -126,6 +128,7 @@ private enum ActionChoice: CaseIterable, Hashable {
         case .showDesktop: .showDesktop
         case .desktopLeft: .desktopLeft
         case .desktopRight: .desktopRight
+        case .middleClick: .middleClick
         case .keystroke: .keystroke(.unset)
         case .shell: .shell("")
         }

@@ -10,6 +10,7 @@ extension Action {
         case .showDesktop: SymbolicHotKey.post(36)
         case .desktopLeft: SymbolicHotKey.post(79)
         case .desktopRight: SymbolicHotKey.post(81)
+        case .middleClick: postMiddleClick()
         case .keystroke(let combo):
             guard let key = combo.key else { return }
             postKey(CGKeyCode(key), CGEventFlags(rawValue: combo.modifiers))
@@ -30,6 +31,15 @@ private func postKey(_ key: CGKeyCode, _ flags: CGEventFlags) {
         guard let event = CGEvent(keyboardEventSource: eventSource, virtualKey: key, keyDown: down) else { return }
         event.flags = flags
         event.post(tap: .cgSessionEventTap)
+    }
+}
+
+/// At the pointer, as if the middle button had been clicked natively.
+private func postMiddleClick() {
+    guard let location = CGEvent(source: nil)?.location else { return }
+    for type in [CGEventType.otherMouseDown, .otherMouseUp] {
+        CGEvent(mouseEventSource: eventSource, mouseType: type, mouseCursorPosition: location, mouseButton: .center)?
+            .post(tap: .cgSessionEventTap)
     }
 }
 

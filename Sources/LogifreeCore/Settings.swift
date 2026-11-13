@@ -35,6 +35,8 @@ public enum Action: Codable, Hashable {
     case showDesktop
     case desktopLeft
     case desktopRight
+    /// A normal middle-click, e.g. when the middle button is the gesture button.
+    case middleClick
     case keystroke(KeyCombo)
     case shell(String)
 }
