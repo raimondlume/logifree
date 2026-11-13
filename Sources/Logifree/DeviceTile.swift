@@ -33,7 +33,7 @@ struct DeviceTile: View {
                     .font(.callout)
                 }
                 Spacer()
-                if row.connected { manageMenu }
+                if row.connected, !renamable.isEmpty || row.canForget { manageMenu }
             }
             if !row.slots.isEmpty {
                 HStack(alignment: .top, spacing: 0) {
@@ -58,7 +58,7 @@ struct DeviceTile: View {
         ) { slot in
             Button("Switch") { model.switchHost(row, to: slot) }
         } message: { slot in
-            Text("\(row.name) will connect to \(slot.name.isEmpty ? "that computer" : slot.name) and stop working on this Mac.")
+            Text("\(row.name) will connect to \(computer(slot)) and stop working on this Mac.")
         }
         .alert("Rename channel \((renaming?.index ?? 0) + 1)", isPresented: isPresent($renaming)) {
             TextField("Name", text: $renameText)
@@ -71,7 +71,7 @@ struct DeviceTile: View {
         ) { slot in
             Button("Forget", role: .destructive) { model.forget(row, slot) }
         } message: { slot in
-            Text("\(row.name) will unpair from \(slot.name.isEmpty ? "that computer" : slot.name). To use it there again, hold the device's channel \(slot.index + 1) button for 3 seconds, then pair it from that computer.")
+            Text("\(row.name) will unpair from \(computer(slot)). To use it there again, hold the device's channel \(slot.index + 1) button for 3 seconds, then pair it from that computer.")
         }
     }
 
@@ -86,11 +86,13 @@ struct DeviceTile: View {
 
     private var manageMenu: some View {
         Menu {
-            Section("Rename") {
-                ForEach(row.slots.filter(\.paired), id: \.index) { slot in
-                    Button("Channel \(slot.index + 1)…") {
-                        renameText = slot.name
-                        renaming = slot
+            if !renamable.isEmpty {
+                Section("Rename") {
+                    ForEach(renamable, id: \.index) { slot in
+                        Button("Channel \(slot.index + 1)…") {
+                            renameText = slot.name ?? ""
+                            renaming = slot
+                        }
                     }
                 }
             }
@@ -111,6 +113,13 @@ struct DeviceTile: View {
         .help("Rename or forget channels")
     }
 
+    /// Paired channels whose name the device can report, and so change.
+    private var renamable: [HostSlot] { row.slots.filter { $0.paired && $0.name != nil } }
+
+    private func computer(_ slot: HostSlot) -> String {
+        slot.name.flatMap { $0.isEmpty ? nil : $0 } ?? "that computer"
+    }
+
     /// The channel in use, or one paired to this Mac under its computer name
     /// (e.g. the same Mac over Bluetooth on another channel).
     private func isThisMac(_ slot: HostSlot, isCurrent: Bool) -> Bool {
@@ -121,7 +130,12 @@ struct DeviceTile: View {
 
     private func help(for slot: HostSlot, isCurrent: Bool) -> String {
         guard slot.paired else { return "Empty. Hold the device's channel \(slot.index + 1) button for 3 seconds to pair a computer." }
-        let name = isThisMac(slot, isCurrent: isCurrent) ? "This Mac" : slot.name.isEmpty ? "Unnamed computer" : slot.name
+        let name = switch slot.name {
+        case _ where isThisMac(slot, isCurrent: isCurrent): "This Mac"
+        case nil: "Computer not reported by the device"
+        case "": "Unnamed computer"
+        case let name?: name
+        }
         let via = slot.bus.isEmpty ? "" : " over \(slot.bus)"
         if isCurrent && row.connected { return "\(name)\(via). In use." }
         return row.connected ? "\(name)\(via). Click to switch." : "\(name)\(via)"
@@ -174,6 +188,7 @@ private struct ChannelKey: View {
     private var caption: String {
         if isThisMac { return "This Mac" }
         if !slot.paired { return "Empty" }
-        return slot.name.isEmpty ? "Unnamed computer" : slot.name
+        guard let name = slot.name else { return "—" } // the device can't say
+        return name.isEmpty ? "Unnamed computer" : name
     }
 }

@@ -5,7 +5,8 @@ public struct HostSlot: Hashable, Codable {
     public let index: UInt8
     public let paired: Bool
     public let bus: String
-    public let name: String
+    /// Nil when the device can't say (no `0x1815`, e.g. MX Anywhere 2S).
+    public let name: String?
     public let isCurrent: Bool
 }
 
@@ -19,7 +20,7 @@ extension Device {
         let named = has(HIDPP.Feature.hostsInfo)
         return (0..<count).map { slot in
             guard named, let host = try? call(HIDPP.Feature.hostsInfo, 1, [slot]) else {
-                return HostSlot(index: slot, paired: true, bus: "", name: "", isCurrent: slot == current)
+                return HostSlot(index: slot, paired: true, bus: "", name: nil, isCurrent: slot == current)
             }
             let paired = host[1] != 0
             return HostSlot(
